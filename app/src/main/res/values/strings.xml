@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Viễn Đông</string>
+
+    <!-- Bottom Navigation -->
+    <string name="nav_home">Trang chính</string>
+    <string name="nav_orders">Đơn hàng</string>
+    <string name="nav_products">Sản phẩm</string>
+    <string name="nav_income">Thu Nhập</string>
+    <string name="nav_profile">Cá nhân</string>
+
+    <!-- Home Screen -->
+    <string name="company_short_name">Cty TNHH Viễn Đông</string>
+    <string name="company_tap_detail">Bấm xem chi tiết công ty</string>
+    <string name="home_weekly_overview">TỔNG QUAN TUẦN NÀY</string>
+    <string name="home_week_badge">Tuần 45</string>
+    <string name="kpi_placed_title">1. Đơn đã đặt</string>
+    <string name="kpi_delivering_title">2. Đang giao</string>
+    <string name="kpi_delivered_title">3. Đã giao</string>
+    <string name="kpi_cancelled_title">4. Đơn đã huỷ</string>
+    <string name="unit_order">đơn</string>
+    <string name="kpi_placed_action">Xem tất cả &gt;</string>
+    <string name="kpi_delivering_action">Định vị &amp; Thu tiền &gt;</string>
+    <string name="kpi_delivered_action">Xem đánh giá KH &gt;</string>
+    <string name="kpi_cancelled_action">Chi tiết huỷ &gt;</string>
+
+    <!-- Sales Pipeline Visualization -->
+    <string name="home_pipeline_title">QUY TRÌNH BÁN HÀNG TRỰC TUYẾN</string>
+    <string name="home_pipeline_badge">Trực tiếp</string>
+    <string name="pipeline_step_1">Tiếp nhận</string>
+    <string name="pipeline_step_2">Đóng gói</string>
+    <string name="pipeline_step_3">Giao vận</string>
+    <string name="pipeline_step_4">Thu tiền</string>
+
+    <!-- Calendar Section -->
+    <string name="home_calendar_title">LỊCH THEO NGÀY</string>
+    <string name="home_month_badge">Tháng 11, 2026</string>
+    <string name="home_recent_orders_title">ĐƠN HÀNG ĐÃ ĐẶT GẦN ĐÂY</string>
+    <string name="home_all_orders_link">Tất cả đơn</string>
+
+    <!-- Order Management Screen -->
+    <string name="orders_title">Quản Lý Đơn Hàng</string>
+    <string name="orders_subtitle">Chạm vào đơn hàng để xem chi tiết &amp; lộ trình</string>
+    <string name="orders_search_hint">Tìm mã đơn, tên khách, SĐT...</string>
+    <string name="orders_new_button">+ Tạo đơn</string>
+    <string name="filter_all">Tất cả</string>
+    <string name="filter_placed">Mới đặt</string>
+    <string name="filter_delivering">Đang giao</string>
+    <string name="filter_delivered">Đã giao</string>
+    <string name="filter_cancelled">Đã huỷ</string>
+    <string name="order_total_prefix">Tổng đơn:</string>
+    <string name="order_detail_link">Chi tiết đơn &gt;</string>
+
+    <!-- Order Detail Modal -->
+    <string name="order_detail_header">CHI TIẾT ĐƠN HÀNG</string>
+    <string name="delivery_status_label">TÌNH TRẠNG GIAO HÀNG (BẤM ĐỂ XEM)</string>
+    <string name="delivery_status_delivering">Đang giao hàng tới khách</string>
+    <string name="delivery_status_delivering_sub">Bấm vào đây để xem bản đồ vị trí shipper thực tế</string>
+    <string name="order_process_title">TIẾN TRÌNH XỬ LÝ ĐƠN HÀNG</string>
+    <string name="customer_info_title">THÔNG TIN KHÁCH HÀNG</string>
+    <string name="ordered_products_title">SẢN PHẨM ĐÃ ĐẶT</string>
+    <string name="subtotal_label">Tiền hàng:</string>
+    <string name="shipping_fee_label">Phí vận chuyển:</string>
+    <string name="total_payment_label">Tổng thanh toán:</string>
+    <string name="payment_method_label">Hình thức thanh toán:</string>
+    <string name="btn_close">Đóng</string>
+    <string name="btn_map_location">Định Vị Bản Đồ</string>
+    <string name="btn_advance_status">Chuyển bước tiếp theo</string>
+
+    <!-- Shipper Map Visualizer -->
+    <string name="shipper_map_title">Theo Dõi Shipper Trực Tiếp</string>
+    <string name="shipper_map_subtitle">Lộ trình giao vận từ Kho Viễn Đông Q.1 đến khách hàng</string>
+
+    <!-- Products Screen -->
+    <string name="products_title">Quản Lý Sản Phẩm</string>
+    <string name="products_subtitle">Kho hàng, tồn kho &amp; hiệu suất bán hàng</string>
+    <string name="products_search_hint">Tìm tên sản phẩm, mã SKU...</string>
+    <string name="products_add_button">+ Thêm SP</string>
+
+    <!-- Income Screen -->
+    <string name="income_title">Quản Lý Thanh Toán</string>
+    <string name="income_subtitle">Theo dõi dòng tiền thu nhập &amp; Doanh thu</string>
+    <string name="income_verified_badge">Đã xác thực</string>
+    <string name="income_hero_label">DÒNG THU NHẬP TUẦN NÀY</string>
+    <string name="income_cod_label">Tiền COD Shipper thu</string>
+    <string name="income_bank_label">Chuyển khoản / Ví điện tử</string>
+    <string name="income_chart_title">BIỂU ĐỒ THU NHẬP</string>
+    <string name="period_week">Tuần</string>
+    <string name="period_month">Tháng</string>
+    <string name="period_year">Năm</string>
+    <string name="income_log_title">NHẬT KÝ THU TIỀN TRONG TUẦN</string>
+    <string name="income_tx_filter">Loại giao dịch</string>
+
+    <!-- Profile Screen -->
+    <string name="profile_title">Trang Cá Nhân Doanh Nghiệp</string>
+    <string name="profile_verified_badge">Đã xác thực hồ sơ</string>
+    <string name="profile_hero_label">HỒ SƠ DOANH NGHIỆP</string>
+    <string name="profile_company_full">Công ty TNHH Thương Mại &amp; Dịch Vụ Viễn Đông</string>
+    <string name="profile_company_desc">Phân phối thiết bị điện tử &amp; Phụ kiện chính hãng toàn quốc</string>
+    <string name="profile_short_name_label">Tên viết tắt: Cty TNHH Viễn Đông</string>
+    <string name="btn_copy">Sao chép</string>
+    <string name="profile_legal_title">THÔNG TIN PHÁP LÝ &amp; LIÊN HỆ</string>
+    <string name="label_company_name">Tên doanh nghiệp</string>
+    <string name="label_tax_id">Mã số thuế</string>
+    <string name="label_business_code">Mã doanh nghiệp</string>
+    <string name="label_contact_email">Email liên hệ</string>
+    <string name="label_phone">Số điện thoại</string>
+    <string name="label_hq_address">Địa chỉ trụ sở</string>
+    <string name="profile_bank_title">THÔNG TIN THANH TOÁN &amp; NGÂN HÀNG</string>
+    <string name="badge_default">Mặc định</string>
+    <string name="label_beneficiary_bank">Ngân hàng thụ hưởng</string>
+    <string name="bank_vcb_name">Vietcombank – Ngân hàng TMCP Ngoại thương Việt Nam</string>
+
+    <!-- Content Descriptions -->
+    <string name="cd_company_avatar">Ảnh đại diện công ty Viễn Đông</string>
+    <string name="cd_notifications">Thông báo đơn hàng</string>
+    <string name="cd_verified_badge">Đã xác thực</string>
+    <string name="cd_close">Đóng hộp thoại</string>
+    <string name="cd_copy">Sao chép thông tin</string>
+    <string name="cd_product_image">Hình ảnh sản phẩm</string>
+</resources>

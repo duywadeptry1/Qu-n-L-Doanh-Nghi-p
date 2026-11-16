@@ -1,0 +1,6 @@
+{
+  "name": "Viễn Đông Sales",
+  "description": "Ứng dụng quản lý bán hàng trực tuyến cho doanh nghiệp: theo dõi đơn hàng, quy trình giao vận, tồn kho sản phẩm và dòng tiền doanh thu.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
