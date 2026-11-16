@@ -1,0 +1,104 @@
+package com.example.api
+
+import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
+
+@JsonClass(generateAdapter = true)
+data class ApiOrderItem(
+    @Json(name = "productName") val productName: String,
+    @Json(name = "quantity") val quantity: Int,
+    @Json(name = "unitPrice") val unitPrice: Long
+)
+
+@JsonClass(generateAdapter = true)
+data class ApiOrder(
+    @Json(name = "id") val id: String,
+    @Json(name = "timeAgo") val timeAgo: String?,
+    @Json(name = "customerName") val customerName: String,
+    @Json(name = "customerPhone") val customerPhone: String,
+    @Json(name = "address") val address: String,
+    @Json(name = "status") val status: String,
+    @Json(name = "items") val items: List<ApiOrderItem>,
+    @Json(name = "shippingFee") val shippingFee: Long,
+    @Json(name = "paymentMethodLabel") val paymentMethodLabel: String,
+    @Json(name = "paymentType") val paymentType: String,
+    @Json(name = "etaMinutes") val etaMinutes: Int?,
+    @Json(name = "distanceKm") val distanceKm: Double?
+)
+
+@JsonClass(generateAdapter = true)
+data class CreateOrderRequest(
+    @Json(name = "customerName") val customerName: String,
+    @Json(name = "customerPhone") val customerPhone: String,
+    @Json(name = "address") val address: String,
+    @Json(name = "productId") val productId: String,
+    @Json(name = "quantity") val quantity: Int,
+    @Json(name = "paymentType") val paymentType: String
+)
+
+@JsonClass(generateAdapter = true)
+data class ApiProduct(
+    @Json(name = "id") val id: String,
+    @Json(name = "sku") val sku: String,
+    @Json(name = "name") val name: String,
+    @Json(name = "category") val category: String,
+    @Json(name = "price") val price: Long,
+    @Json(name = "stock") val stock: Int,
+    @Json(name = "soldCount") val soldCount: Int,
+    @Json(name = "imageResName") val imageResName: String?,
+    @Json(name = "description") val description: String? = null,
+    @Json(name = "imageUrl") val imageUrl: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class CreateProductRequest(
+    @Json(name = "name") val name: String,
+    @Json(name = "category") val category: String,
+    @Json(name = "price") val price: Long,
+    @Json(name = "stock") val stock: Int,
+    @Json(name = "description") val description: String = "",
+    @Json(name = "imageUrl") val imageUrl: String = "",
+    @Json(name = "imageResName") val imageResName: String = ""
+)
+
+@JsonClass(generateAdapter = true)
+data class RestockRequest(
+    @Json(name = "amount") val amount: Int = 10
+)
+
+@JsonClass(generateAdapter = true)
+data class ApiTransaction(
+    @Json(name = "id") val id: String,
+    @Json(name = "orderCode") val orderCode: String,
+    @Json(name = "methodTitle") val methodTitle: String,
+    @Json(name = "subtitle") val subtitle: String,
+    @Json(name = "amount") val amount: Long,
+    @Json(name = "paymentType") val paymentType: String
+)
+
+@JsonClass(generateAdapter = true)
+data class ApiNotification(
+    @Json(name = "id") val id: String,
+    @Json(name = "title") val title: String,
+    @Json(name = "message") val message: String,
+    @Json(name = "timeAgo") val timeAgo: String?,
+    @Json(name = "isAlert") val isAlert: Boolean?
+)
+
+@JsonClass(generateAdapter = true)
+data class ApiCalendarDay(
+    @Json(name = "dayNumber") val dayNumber: Int,
+    @Json(name = "monthLabel") val monthLabel: String,
+    @Json(name = "fullDateLabel") val fullDateLabel: String,
+    @Json(name = "totalOrders") val totalOrders: Int,
+    @Json(name = "deliveredOrders") val deliveredOrders: Int,
+    @Json(name = "cancelledOrders") val cancelledOrders: Int
+)
+
+@JsonClass(generateAdapter = true)
+data class ApiDashboardKpis(
+    @Json(name = "placedCount") val placedCount: Int,
+    @Json(name = "deliveringCount") val deliveringCount: Int,
+    @Json(name = "deliveredCount") val deliveredCount: Int,
+    @Json(name = "cancelledCount") val cancelledCount: Int
+)
