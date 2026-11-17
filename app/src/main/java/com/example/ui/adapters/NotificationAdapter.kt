@@ -8,7 +8,9 @@ import com.example.R
 import com.example.databinding.ItemNotificationBinding
 import com.example.model.NotificationItem
 
-class NotificationAdapter : RecyclerView.Adapter<NotificationAdapter.NotifViewHolder>() {
+class NotificationAdapter(
+    private val onNotificationClick: ((NotificationItem) -> Unit)? = null
+) : RecyclerView.Adapter<NotificationAdapter.NotifViewHolder>() {
 
     private var items: List<NotificationItem> = emptyList()
 
@@ -46,6 +48,10 @@ class NotificationAdapter : RecyclerView.Adapter<NotificationAdapter.NotifViewHo
             } else {
                 binding.ivNotifIcon.setBackgroundResource(R.drawable.bg_icon_square_blue)
                 binding.ivNotifIcon.setColorFilter(ContextCompat.getColor(ctx, R.color.primary_blue))
+            }
+
+            binding.root.setOnClickListener {
+                onNotificationClick?.invoke(item)
             }
         }
     }

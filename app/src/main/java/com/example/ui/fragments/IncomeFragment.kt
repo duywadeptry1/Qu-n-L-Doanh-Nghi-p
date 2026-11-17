@@ -69,9 +69,11 @@ class IncomeFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
-                    viewModel.incomePeriod.collect { period ->
+                    combine(viewModel.incomePeriod, viewModel.orders) { period, orders ->
+                        period to orders
+                    }.collect { (period, orders) ->
                         updatePeriodTabs(period)
-                        val data = viewModel.getIncomeData(period)
+                        val data = viewModel.getIncomeData(period, orders)
                         binding.tvIncomeHeroLabel.text = data.heroLabel
                         binding.tvIncomeTotal.text = data.totalFormatted
                         binding.tvIncomeGrowth.text = data.growthPercent
@@ -79,7 +81,13 @@ class IncomeFragment : Fragment() {
                         binding.tvIncomeBank.text = data.bankFormatted
                         binding.tvChartAvg.text = data.avgFormatted
                         binding.tvChartPeak.text = data.peakText
-                        binding.incomeBarChart.setData(data.bars, data.maxAxisValue, initialSelection = 0)
+
+                        val defaultSelectedIdx = when (period) {
+                            IncomePeriod.WEEK -> 1 // T3 (17/11)
+                            IncomePeriod.MONTH -> 2 // Tuần 3 (15-21/11)
+                            IncomePeriod.YEAR -> 3 // Quý 4 (Thg 11)
+                        }.coerceIn(0, (data.bars.size - 1).coerceAtLeast(0))
+                        binding.incomeBarChart.setData(data.bars, data.maxAxisValue, initialSelection = defaultSelectedIdx)
                     }
                 }
 

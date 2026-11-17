@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -16,12 +17,15 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.R
 import com.example.databinding.FragmentOrdersBinding
+import com.example.model.CurrencyFormatter
+import com.example.model.Order
 import com.example.model.OrderFilter
 import com.example.model.OrderStatus
 import com.example.ui.adapters.OrderCardAdapter
 import com.example.ui.dialogs.CreateOrderBottomSheet
 import com.example.ui.dialogs.OrderDetailBottomSheet
 import com.example.viewmodel.SalesViewModel
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -45,10 +49,15 @@ class OrdersFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        orderAdapter = OrderCardAdapter { order ->
-            OrderDetailBottomSheet.newInstance(order.id)
-                .show(parentFragmentManager, "order_detail")
-        }
+        orderAdapter = OrderCardAdapter(
+            onOrderClick = { order ->
+                OrderDetailBottomSheet.newInstance(order.id)
+                    .show(parentFragmentManager, "order_detail")
+            },
+            onConfirmStatusClick = { order ->
+                showQuickConfirmStatusDialog(order)
+            }
+        )
         binding.rvOrders.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = orderAdapter
@@ -58,9 +67,41 @@ class OrdersFragment : Fragment() {
         observeViewModel()
     }
 
+    private fun showQuickConfirmStatusDialog(order: Order) {
+        val (title, message) = when (order.status) {
+            OrderStatus.PLACED ->
+                "Xác nhận Duyệt & Chuẩn bị hàng" to
+                    "Xác nhận duyệt đơn #${order.id} (${order.customerName}) và chuyển sang bước Chuẩn bị hàng?"
+            OrderStatus.PREPARING ->
+                "Xác nhận Giao cho ĐVVC" to
+                    "Xác nhận kiện hàng #${order.id} đã chuẩn bị xong và bàn giao cho đơn vị vận chuyển?"
+            OrderStatus.DELIVERING ->
+                "Xác nhận Đơn đã đến tay khách" to
+                    "Xác nhận đơn hàng #${order.id} đã đến tay khách hàng thành công và cộng ${CurrencyFormatter.formatVnd(order.total)} vào thu nhập thực tế?"
+            else -> return
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton("Xác nhận") { _, _ ->
+                val updated = viewModel.advanceOrderStatus(order.id)
+                if (updated != null) {
+                    Toast.makeText(
+                        requireContext(),
+                        "Đã xác nhận đơn #${updated.id}: ${updated.status.label}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+            .setNegativeButton("Huỷ", null)
+            .show()
+    }
+
     private fun setupListeners() {
         binding.chipFilterAll.setOnClickListener { viewModel.selectOrderFilter(OrderFilter.ALL) }
         binding.chipFilterPlaced.setOnClickListener { viewModel.selectOrderFilter(OrderFilter.PLACED) }
+        binding.chipFilterPreparing.setOnClickListener { viewModel.selectOrderFilter(OrderFilter.PREPARING) }
         binding.chipFilterDelivering.setOnClickListener { viewModel.selectOrderFilter(OrderFilter.DELIVERING) }
         binding.chipFilterDelivered.setOnClickListener { viewModel.selectOrderFilter(OrderFilter.DELIVERED) }
         binding.chipFilterCancelled.setOnClickListener { viewModel.selectOrderFilter(OrderFilter.CANCELLED) }
@@ -94,6 +135,7 @@ class OrdersFragment : Fragment() {
                         val matchesFilter = when (filter) {
                             OrderFilter.ALL -> true
                             OrderFilter.PLACED -> order.status == OrderStatus.PLACED
+                            OrderFilter.PREPARING -> order.status == OrderStatus.PREPARING
                             OrderFilter.DELIVERING -> order.status == OrderStatus.DELIVERING
                             OrderFilter.DELIVERED -> order.status == OrderStatus.DELIVERED
                             OrderFilter.CANCELLED -> order.status == OrderStatus.CANCELLED
@@ -125,6 +167,7 @@ class OrdersFragment : Fragment() {
         val chipMap = mapOf(
             OrderFilter.ALL to binding.chipFilterAll,
             OrderFilter.PLACED to binding.chipFilterPlaced,
+            OrderFilter.PREPARING to binding.chipFilterPreparing,
             OrderFilter.DELIVERING to binding.chipFilterDelivering,
             OrderFilter.DELIVERED to binding.chipFilterDelivered,
             OrderFilter.CANCELLED to binding.chipFilterCancelled

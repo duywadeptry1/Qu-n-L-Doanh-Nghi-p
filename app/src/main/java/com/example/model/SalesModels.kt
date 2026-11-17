@@ -5,17 +5,19 @@ import java.text.NumberFormat
 import java.util.Locale
 
 enum class OrderStatus(val label: String) {
-    PLACED("Đã đặt"),
-    DELIVERING("Đang giao"),
-    DELIVERED("Đã giao"),
+    PLACED("Khách đặt hàng"),
+    PREPARING("Duyệt & Chuẩn bị"),
+    DELIVERING("Giao cho ĐVVC"),
+    DELIVERED("Đã đến tay khách"),
     CANCELLED("Đã huỷ")
 }
 
 enum class OrderFilter(val label: String) {
     ALL("Tất cả"),
-    PLACED("Mới đặt"),
-    DELIVERING("Đang giao"),
-    DELIVERED("Đã giao"),
+    PLACED("Khách đặt"),
+    PREPARING("Chuẩn bị hàng"),
+    DELIVERING("Giao ĐVVC"),
+    DELIVERED("Thành công"),
     CANCELLED("Đã huỷ")
 }
 
@@ -49,10 +51,7 @@ data class Order(
     val shippingFee: Long,
     val paymentMethodLabel: String,
     val paymentType: PaymentType,
-    val shipperName: String = "Trần Minh Quân",
-    val shipperPlate: String = "59-D2 482.19",
-    val etaMinutes: Int = 12,
-    val distanceKm: Double = 2.4
+    val createdAt: String = ""
 ) {
     val subtotal: Long
         get() = items.sumOf { it.unitPrice * it.quantity }
@@ -74,13 +73,33 @@ data class Product(
     val imageUrl: String = ""
 )
 
+data class BulkProductInput(
+    val sku: String = "",
+    val name: String,
+    val category: String,
+    val price: Long,
+    val stock: Int,
+    val description: String = "",
+    val imageUrl: String = ""
+)
+
+data class BulkImportOutcome(
+    val success: Boolean,
+    val insertedCount: Int,
+    val skippedCount: Int = 0,
+    val savedOffline: Boolean = false,
+    val message: String = "",
+    val products: List<Product> = emptyList()
+)
+
 data class CalendarDaySummary(
     val dayNumber: Int,
     val monthLabel: String,
     val fullDate: String,
     val totalOrders: Int,
     val completedOrders: Int,
-    val deliveringOrders: Int
+    val deliveringOrders: Int,
+    val isFuture: Boolean = false
 )
 
 data class IncomeBarPoint(

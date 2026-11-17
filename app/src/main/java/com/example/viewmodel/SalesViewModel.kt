@@ -10,9 +10,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 data class DashboardKpis(
     val placedCount: Int,
+    val preparingCount: Int,
     val deliveringCount: Int,
     val deliveredCount: Int,
     val cancelledCount: Int
@@ -40,10 +42,10 @@ class SalesViewModel : ViewModel() {
     private val _productSearch = MutableStateFlow("")
     val productSearch: StateFlow<String> = _productSearch.asStateFlow()
 
-    private val _calendarDays = MutableStateFlow(seedCalendarDays())
+    private val _calendarDays = MutableStateFlow<List<CalendarDaySummary>>(emptyList())
     val calendarDays: StateFlow<List<CalendarDaySummary>> = _calendarDays.asStateFlow()
 
-    private val _selectedDayNumber = MutableStateFlow(15)
+    private val _selectedDayNumber = MutableStateFlow(TODAY_DAY)
     val selectedDayNumber: StateFlow<Int> = _selectedDayNumber.asStateFlow()
 
     private val _incomePeriod = MutableStateFlow(IncomePeriod.WEEK)
@@ -52,16 +54,17 @@ class SalesViewModel : ViewModel() {
     private val _txTypeFilter = MutableStateFlow(PaymentType.ALL)
     val txTypeFilter: StateFlow<PaymentType> = _txTypeFilter.asStateFlow()
 
-    private val _transactions = MutableStateFlow(seedTransactions())
+    private val _transactions = MutableStateFlow<List<PaymentTransaction>>(emptyList())
     val transactions: StateFlow<List<PaymentTransaction>> = _transactions.asStateFlow()
 
-    private val _notifications = MutableStateFlow(seedNotifications())
+    private val _notifications = MutableStateFlow<List<NotificationItem>>(emptyList())
     val notifications: StateFlow<List<NotificationItem>> = _notifications.asStateFlow()
 
     private val _hasUnreadNotifications = MutableStateFlow(true)
     val hasUnreadNotifications: StateFlow<Boolean> = _hasUnreadNotifications.asStateFlow()
 
     init {
+        recomputeDerivedData()
         loadDataFromBackend()
     }
 
@@ -71,15 +74,19 @@ class SalesViewModel : ViewModel() {
 
     private fun loadDataFromBackend() {
         viewModelScope.launch {
+            repository.checkBackendConnection()
+
             val backendOrders = repository.fetchOrders()
-            if (!backendOrders.isNullOrEmpty()) {
+            if (backendOrders != null) {
                 _orders.value = backendOrders
             }
 
             val backendProducts = repository.fetchProducts()
-            if (!backendProducts.isNullOrEmpty()) {
+            if (backendProducts != null) {
                 _products.value = backendProducts
             }
+
+            recomputeDerivedData()
 
             val backendTx = repository.fetchTransactions()
             if (!backendTx.isNullOrEmpty()) {
@@ -92,24 +99,175 @@ class SalesViewModel : ViewModel() {
             }
 
             val backendCalendar = repository.fetchCalendarDays()
-            if (!backendCalendar.isNullOrEmpty()) {
+            if (!backendCalendar.isNullOrEmpty() && backendCalendar.size >= 28) {
                 _calendarDays.value = backendCalendar
             }
         }
     }
 
+    private fun recomputeDerivedData() {
+        val currentOrders = _orders.value
+        val currentProducts = _products.value
+        _calendarDays.value = buildMonthlyCalendarFromOrders(currentOrders)
+        _transactions.value = buildTransactionsFromOrders(currentOrders)
+        _notifications.value = buildNotificationsFromRealData(currentOrders, currentProducts)
+    }
+
+    /**
+     * 100% real counts directly from actual orders (no artificial base offsets).
+     */
     fun computeKpis(currentOrders: List<Order>): DashboardKpis {
-        val basePlaced = 47
-        val baseDelivering = 13
-        val baseDelivered = 126
-        val baseCancelled = 2
+        val placed = currentOrders.count { it.status == OrderStatus.PLACED }
+        val preparing = currentOrders.count { it.status == OrderStatus.PREPARING }
+        val delivering = currentOrders.count { it.status == OrderStatus.DELIVERING }
+        val delivered = currentOrders.count { it.status == OrderStatus.DELIVERED }
+        val cancelled = currentOrders.count { it.status == OrderStatus.CANCELLED }
 
-        val placed = basePlaced + currentOrders.count { it.status == OrderStatus.PLACED }
-        val delivering = baseDelivering + currentOrders.count { it.status == OrderStatus.DELIVERING }
-        val delivered = baseDelivered + currentOrders.count { it.status == OrderStatus.DELIVERED }
-        val cancelled = baseCancelled + currentOrders.count { it.status == OrderStatus.CANCELLED }
+        return DashboardKpis(
+            placedCount = placed,
+            preparingCount = preparing,
+            deliveringCount = delivering,
+            deliveredCount = delivered,
+            cancelledCount = cancelled
+        )
+    }
 
-        return DashboardKpis(placed, delivering, delivered, cancelled)
+    fun extractOrderDayOfMonth(order: Order): Int {
+        val dateRegex = Regex("""(\d{1,2})/11/2026""")
+        dateRegex.find(order.timeAgo)?.groupValues?.getOrNull(1)?.toIntOrNull()?.let { day ->
+            if (day in 1..30) return day
+        }
+        val isoRegex = Regex("""2026-11-(\d{2})""")
+        isoRegex.find(order.createdAt)?.groupValues?.getOrNull(1)?.toIntOrNull()?.let { day ->
+            if (day in 1..30) return day
+        }
+        val lower = order.timeAgo.lowercase(Locale.ROOT)
+        return when {
+            lower.contains("hôm qua") -> TODAY_DAY - 1
+            else -> TODAY_DAY
+        }
+    }
+
+    fun getOrdersForDay(dayNumber: Int, allOrders: List<Order> = _orders.value): List<Order> {
+        if (dayNumber > TODAY_DAY) return emptyList()
+        return allOrders.filter { extractOrderDayOfMonth(it) == dayNumber }
+    }
+
+    private fun buildMonthlyCalendarFromOrders(currentOrders: List<Order>): List<CalendarDaySummary> {
+        return (1..30).map { day ->
+            val isFuture = day > TODAY_DAY
+            val dayStr = day.toString().padStart(2, '0')
+            if (isFuture) {
+                CalendarDaySummary(
+                    dayNumber = day,
+                    monthLabel = "Thg 11",
+                    fullDate = "Ngày $dayStr/11/2026 (Chưa tới)",
+                    totalOrders = 0,
+                    completedOrders = 0,
+                    deliveringOrders = 0,
+                    isFuture = true
+                )
+            } else {
+                val ordersOfDay = currentOrders.filter { extractOrderDayOfMonth(it) == day }
+                val completed = ordersOfDay.count { it.status == OrderStatus.DELIVERED }
+                val inProgress = ordersOfDay.count {
+                    it.status == OrderStatus.PLACED ||
+                        it.status == OrderStatus.PREPARING ||
+                        it.status == OrderStatus.DELIVERING
+                }
+                val title = if (day == TODAY_DAY) {
+                    "Hôm nay, $dayStr/11/2026"
+                } else {
+                    "Ngày $dayStr/11/2026"
+                }
+                CalendarDaySummary(
+                    dayNumber = day,
+                    monthLabel = "Thg 11",
+                    fullDate = title,
+                    totalOrders = ordersOfDay.size,
+                    completedOrders = completed,
+                    deliveringOrders = inProgress,
+                    isFuture = false
+                )
+            }
+        }
+    }
+
+    private fun buildTransactionsFromOrders(currentOrders: List<Order>): List<PaymentTransaction> {
+        return currentOrders
+            .filter { it.status == OrderStatus.DELIVERED }
+            .map { order ->
+                val day = extractOrderDayOfMonth(order).toString().padStart(2, '0')
+                PaymentTransaction(
+                    id = "tx-${order.id}",
+                    orderCode = "#${order.id}",
+                    methodTitle = "Đơn #${order.id} (${order.paymentType.label})",
+                    subtitle = "$day/11/2026 • Đã đến tay ${order.customerName}",
+                    amount = order.total,
+                    paymentType = order.paymentType
+                )
+            }
+    }
+
+    private fun buildNotificationsFromRealData(
+        currentOrders: List<Order>,
+        currentProducts: List<Product>
+    ): List<NotificationItem> {
+        val list = mutableListOf<NotificationItem>()
+
+        val lowStock = currentProducts.filter { it.stock <= 10 }
+        if (lowStock.isNotEmpty()) {
+            val preview = lowStock.take(3).joinToString(", ") { "${it.name} (còn ${it.stock})" }
+            list.add(
+                NotificationItem(
+                    id = "notif-low-stock",
+                    title = "Cảnh báo tồn kho thấp (${lowStock.size} mã SP)",
+                    message = "$preview cần nhập thêm hàng vào kho.",
+                    timeAgo = "17/11/2026",
+                    isAlert = true
+                )
+            )
+        }
+
+        currentOrders.take(12).forEach { order ->
+            val (title, msg, isAlert) = when (order.status) {
+                OrderStatus.PLACED -> Triple(
+                    "Đơn mới #${order.id} chờ duyệt",
+                    "${order.customerName} vừa đặt hàng (${CurrencyFormatter.formatVnd(order.total)}). Cần duyệt đơn & chuẩn bị hàng.",
+                    true
+                )
+                OrderStatus.PREPARING -> Triple(
+                    "Đang chuẩn bị hàng #${order.id}",
+                    "Đơn của ${order.customerName} đã được duyệt và đang đóng gói tại kho.",
+                    false
+                )
+                OrderStatus.DELIVERING -> Triple(
+                    "Đã giao ĐVVC đơn #${order.id}",
+                    "Đơn hàng của ${order.customerName} đã bàn giao cho đơn vị vận chuyển.",
+                    false
+                )
+                OrderStatus.DELIVERED -> Triple(
+                    "Giao thành công #${order.id}",
+                    "Đơn hàng đã đến tay ${order.customerName}. Đã ghi nhận thu nhập +${CurrencyFormatter.formatVnd(order.total)}.",
+                    false
+                )
+                OrderStatus.CANCELLED -> Triple(
+                    "Đơn hàng #${order.id} đã huỷ",
+                    "Đơn của ${order.customerName} đã được xác nhận huỷ.",
+                    true
+                )
+            }
+            list.add(
+                NotificationItem(
+                    id = "notif-order-${order.id}",
+                    title = title,
+                    message = msg,
+                    timeAgo = order.timeAgo,
+                    isAlert = isAlert
+                )
+            )
+        }
+        return list
     }
 
     fun selectOrderFilter(filter: OrderFilter) {
@@ -155,54 +313,19 @@ class SalesViewModel : ViewModel() {
         return _orders.value.find { it.id == orderId }
     }
 
+    fun nextWorkflowStatus(current: OrderStatus): OrderStatus? {
+        return when (current) {
+            OrderStatus.PLACED -> OrderStatus.PREPARING
+            OrderStatus.PREPARING -> OrderStatus.DELIVERING
+            OrderStatus.DELIVERING -> OrderStatus.DELIVERED
+            OrderStatus.DELIVERED, OrderStatus.CANCELLED -> null
+        }
+    }
+
     fun advanceOrderStatus(orderId: String): Order? {
-        var updatedOrder: Order? = null
-        _orders.update { list ->
-            list.map { order ->
-                if (order.id == orderId) {
-                    val nextStatus = when (order.status) {
-                        OrderStatus.PLACED -> OrderStatus.DELIVERING
-                        OrderStatus.DELIVERING -> OrderStatus.DELIVERED
-                        OrderStatus.DELIVERED -> OrderStatus.DELIVERED
-                        OrderStatus.CANCELLED -> OrderStatus.CANCELLED
-                    }
-                    val nextOrder = order.copy(
-                        status = nextStatus,
-                        etaMinutes = if (nextStatus == OrderStatus.DELIVERED) 0 else order.etaMinutes
-                    )
-                    updatedOrder = nextOrder
-                    nextOrder
-                } else {
-                    order
-                }
-            }
-        }
-
-        viewModelScope.launch {
-            val backendResult = repository.advanceOrderStatus(orderId)
-            if (backendResult != null) {
-                _orders.update { list -> list.map { if (it.id == orderId) backendResult else it } }
-            }
-            refreshBackendData()
-        }
-
-        updatedOrder?.let { order ->
-            if (order.status == OrderStatus.DELIVERED) {
-                val txExists = _transactions.value.any { it.orderCode == "#${order.id}" }
-                if (!txExists) {
-                    val newTx = PaymentTransaction(
-                        id = "tx-${order.id}",
-                        orderCode = "#${order.id}",
-                        methodTitle = "Đơn #${order.id} (${order.paymentType.label})",
-                        subtitle = "15/11/2026 - Vừa đối soát thành công",
-                        amount = order.total,
-                        paymentType = order.paymentType
-                    )
-                    _transactions.update { listOf(newTx) + it }
-                }
-            }
-        }
-        return updatedOrder
+        val current = getOrderById(orderId) ?: return null
+        val nextStatus = nextWorkflowStatus(current.status) ?: current.status
+        return updateOrderStatus(orderId, nextStatus)
     }
 
     fun updateOrderStatus(orderId: String, targetStatus: OrderStatus): Order? {
@@ -210,10 +333,7 @@ class SalesViewModel : ViewModel() {
         _orders.update { list ->
             list.map { order ->
                 if (order.id == orderId) {
-                    val nextOrder = order.copy(
-                        status = targetStatus,
-                        etaMinutes = if (targetStatus == OrderStatus.DELIVERED) 0 else order.etaMinutes
-                    )
+                    val nextOrder = order.copy(status = targetStatus)
                     updatedOrder = nextOrder
                     nextOrder
                 } else {
@@ -222,30 +342,18 @@ class SalesViewModel : ViewModel() {
             }
         }
 
+        recomputeDerivedData()
+        _hasUnreadNotifications.value = true
+
         viewModelScope.launch {
             val backendResult = repository.updateOrderStatus(orderId, targetStatus)
             if (backendResult != null) {
                 _orders.update { list -> list.map { if (it.id == orderId) backendResult else it } }
+                recomputeDerivedData()
             }
             refreshBackendData()
         }
 
-        updatedOrder?.let { order ->
-            if (order.status == OrderStatus.DELIVERED) {
-                val txExists = _transactions.value.any { it.orderCode == "#${order.id}" }
-                if (!txExists) {
-                    val newTx = PaymentTransaction(
-                        id = "tx-${order.id}",
-                        orderCode = "#${order.id}",
-                        methodTitle = "Đơn #${order.id} (${order.paymentType.label})",
-                        subtitle = "15/11/2026 - Vừa đối soát thành công",
-                        amount = order.total,
-                        paymentType = order.paymentType
-                    )
-                    _transactions.update { listOf(newTx) + it }
-                }
-            }
-        }
         return updatedOrder
     }
 
@@ -260,6 +368,13 @@ class SalesViewModel : ViewModel() {
         refreshBackendData()
     }
 
+    fun resetServerUrl() {
+        com.example.api.RetrofitClient.resetToDefault()
+        refreshBackendData()
+    }
+
+    suspend fun checkBackendConnection(): Pair<Boolean, String> = repository.checkBackendConnection()
+
     fun createOrder(
         customerName: String,
         customerPhone: String,
@@ -268,8 +383,10 @@ class SalesViewModel : ViewModel() {
         quantity: Int,
         paymentType: PaymentType
     ): Order {
-        val nextNum = 9822 + (_orders.value.size - 5).coerceAtLeast(0)
-        val newId = "DH-$nextNum"
+        val maxNum = _orders.value.mapNotNull {
+            it.id.removePrefix("DH-").toIntOrNull()
+        }.maxOrNull() ?: 9821
+        val newId = "DH-${maxNum + 1}"
         val paymentLabel = when (paymentType) {
             PaymentType.COD -> "Thanh toán khi nhận hàng (COD)"
             PaymentType.BANK -> "Chuyển khoản ngân hàng (VCB)"
@@ -278,7 +395,7 @@ class SalesViewModel : ViewModel() {
         }
         val newOrder = Order(
             id = newId,
-            timeAgo = "Vừa xong",
+            timeAgo = "17/11/2026 • Vừa xong",
             customerName = customerName,
             customerPhone = customerPhone,
             address = address,
@@ -286,7 +403,8 @@ class SalesViewModel : ViewModel() {
             items = listOf(OrderItem(product.name, quantity, product.price)),
             shippingFee = 30000L,
             paymentMethodLabel = paymentLabel,
-            paymentType = paymentType
+            paymentType = paymentType,
+            createdAt = "2026-11-17T15:00:00+07:00"
         )
         _orders.update { listOf(newOrder) + it }
         _products.update { list ->
@@ -299,16 +417,8 @@ class SalesViewModel : ViewModel() {
                 } else it
             }
         }
-        _notifications.update {
-            listOf(
-                NotificationItem(
-                    id = "notif-$newId",
-                    title = "Đơn hàng mới #$newId",
-                    message = "$customerName vừa đặt ${quantity}x ${product.name}.",
-                    timeAgo = "Vừa xong"
-                )
-            ) + it
-        }
+        _selectedDayNumber.value = TODAY_DAY
+        recomputeDerivedData()
         _hasUnreadNotifications.value = true
 
         viewModelScope.launch {
@@ -327,6 +437,7 @@ class SalesViewModel : ViewModel() {
                 if (it.id == productId) it.copy(stock = it.stock + amount) else it
             }
         }
+        recomputeDerivedData()
         viewModelScope.launch {
             repository.restockProduct(productId, amount)
             refreshBackendData()
@@ -360,11 +471,64 @@ class SalesViewModel : ViewModel() {
             imageUrl = imageUrl
         )
         _products.update { listOf(newProduct) + it }
+        recomputeDerivedData()
 
         viewModelScope.launch {
             repository.createProduct(name, category, price, stock, description, imageUrl)
             refreshBackendData()
         }
+    }
+
+    suspend fun addProductsBulk(items: List<BulkProductInput>): BulkImportOutcome {
+        if (items.isEmpty()) {
+            return BulkImportOutcome(success = false, insertedCount = 0, message = "Không có sản phẩm nào để lưu")
+        }
+
+        val outcome = repository.createProductsBulk(items)
+        if (outcome.success) {
+            val refreshed = repository.fetchProducts()
+            if (!refreshed.isNullOrEmpty()) {
+                _products.value = refreshed
+            } else if (outcome.products.isNotEmpty()) {
+                _products.update { current -> outcome.products + current }
+            }
+            recomputeDerivedData()
+            return outcome
+        }
+
+        val existingMax = _products.value.mapNotNull {
+            it.id.removePrefix("p-").toIntOrNull()
+        }.maxOrNull() ?: _products.value.size
+
+        val localProducts = items.mapIndexed { idx, item ->
+            val seq = existingMax + idx + 1
+            val imageRes = if (item.category == "Thời trang") {
+                R.drawable.img_product_tshirt
+            } else {
+                R.drawable.img_product_electronics
+            }
+            Product(
+                id = "p-$seq",
+                sku = item.sku.ifBlank { "VD-SP${seq.toString().padStart(2, '0')}" },
+                name = item.name,
+                category = item.category,
+                price = item.price,
+                stock = item.stock,
+                soldCount = 0,
+                imageRes = imageRes,
+                description = item.description,
+                imageUrl = item.imageUrl
+            )
+        }
+        _products.update { current -> localProducts.reversed() + current }
+        recomputeDerivedData()
+        return BulkImportOutcome(
+            success = true,
+            insertedCount = localProducts.size,
+            savedOffline = true,
+            message = "Không kết nối được Backend — đã thêm tạm ${localProducts.size} sản phẩm trên ứng dụng",
+            products = localProducts
+        )
     }
 
     fun updateProduct(
@@ -390,77 +554,160 @@ class SalesViewModel : ViewModel() {
                 } else it
             }
         }
+        recomputeDerivedData()
         viewModelScope.launch {
             repository.updateProduct(productId, name, category, price, stock, description, imageUrl)
             refreshBackendData()
         }
     }
 
-    fun getIncomeData(period: IncomePeriod): IncomePeriodData {
+    /**
+     * Computes real income statistics directly from delivered orders in `_orders`.
+     */
+    fun getIncomeData(period: IncomePeriod, currentOrders: List<Order> = _orders.value): IncomePeriodData {
+        val deliveredOrders = currentOrders.filter { it.status == OrderStatus.DELIVERED }
+        val totalRevenue = deliveredOrders.sumOf { it.total }
+        val codRevenue = deliveredOrders.filter { it.paymentType == PaymentType.COD }.sumOf { it.total }
+        val bankAndWalletRevenue = deliveredOrders.filter {
+            it.paymentType == PaymentType.BANK || it.paymentType == PaymentType.WALLET
+        }.sumOf { it.total }
+
+        fun formatMillionsPill(amount: Long): String {
+            if (amount <= 0L) return "0đ"
+            val m = amount / 1_000_000f
+            return if (m >= 1f) {
+                String.format(Locale("vi", "VN"), "%.2fTR", m).replace(".00", "")
+            } else {
+                "${amount / 1000}K"
+            }
+        }
+
         return when (period) {
-            IncomePeriod.WEEK -> IncomePeriodData(
-                period = IncomePeriod.WEEK,
-                heroLabel = "DÒNG THU NHẬP TUẦN NÀY",
-                totalFormatted = "34.850.000 VNĐ",
-                growthPercent = "+14.2%",
-                codFormatted = "21.400.000đ",
-                bankFormatted = "13.450.000đ",
-                avgFormatted = "4.970.000đ",
-                peakText = "Đỉnh điểm: 8.5tr (Thứ 6)",
-                maxAxisValue = 9f,
-                bars = listOf(
-                    IncomeBarPoint("T2", 4.2f, "4,2TR"),
-                    IncomeBarPoint("T3", 3.8f, "3,8TR"),
-                    IncomeBarPoint("T4", 5.1f, "5,1TR"),
-                    IncomeBarPoint("T5", 4.6f, "4,6TR"),
-                    IncomeBarPoint("T6", 8.5f, "8,5TR"),
-                    IncomeBarPoint("T7", 6.2f, "6,2TR"),
-                    IncomeBarPoint("CN", 2.45f, "2,5TR")
+            IncomePeriod.WEEK -> {
+                // Week of 11/11..17/11/2026
+                val weekDays = listOf(
+                    11 to "11/11",
+                    12 to "12/11",
+                    13 to "13/11",
+                    14 to "14/11",
+                    15 to "15/11",
+                    16 to "16/11",
+                    17 to "17/11"
                 )
-            )
-            IncomePeriod.MONTH -> IncomePeriodData(
-                period = IncomePeriod.MONTH,
-                heroLabel = "DÒNG THU NHẬP THÁNG 11",
-                totalFormatted = "142.600.000 VNĐ",
-                growthPercent = "+18.6%",
-                codFormatted = "84.200.000đ",
-                bankFormatted = "58.400.000đ",
-                avgFormatted = "35.650.000đ",
-                peakText = "Đỉnh điểm: 42.5tr (Tuần 3)",
-                maxAxisValue = 45f,
-                bars = listOf(
-                    IncomeBarPoint("T.42", 28.4f, "28,4TR"),
-                    IncomeBarPoint("T.43", 36.8f, "36,8TR"),
-                    IncomeBarPoint("T.44", 42.5f, "42,5TR"),
-                    IncomeBarPoint("T.45", 34.9f, "34,9TR")
+                val dayAmounts = weekDays.map { (dayNum, label) ->
+                    val sum = deliveredOrders
+                        .filter { extractOrderDayOfMonth(it) == dayNum }
+                        .sumOf { it.total }
+                    Triple(dayNum, label, sum)
+                }
+                val bars = dayAmounts.map { (_, label, sum) ->
+                    IncomeBarPoint(
+                        label = label,
+                        valueMillions = sum / 1_000_000f,
+                        displayPill = formatMillionsPill(sum)
+                    )
+                }
+                val maxMillions = (bars.maxOfOrNull { it.valueMillions } ?: 1f).coerceAtLeast(1f) * 1.2f
+                val activeDaysCount = dayAmounts.count { it.third > 0L }.coerceAtLeast(1)
+                val avgAmount = totalRevenue / activeDaysCount
+                val peak = dayAmounts.maxByOrNull { it.third }
+                val peakText = if (peak != null && peak.third > 0L) {
+                    "Đỉnh điểm: ${CurrencyFormatter.formatVnd(peak.third)} (${peak.second})"
+                } else {
+                    "Chưa phát sinh đơn giao thành công"
+                }
+
+                IncomePeriodData(
+                    period = IncomePeriod.WEEK,
+                    heroLabel = "THU NHẬP THỰC TẾ (11/11 - 17/11)",
+                    totalFormatted = CurrencyFormatter.formatVndFull(totalRevenue),
+                    growthPercent = "${deliveredOrders.size} đơn hoàn tất",
+                    codFormatted = CurrencyFormatter.formatVnd(codRevenue),
+                    bankFormatted = CurrencyFormatter.formatVnd(bankAndWalletRevenue),
+                    avgFormatted = CurrencyFormatter.formatVnd(avgAmount),
+                    peakText = peakText,
+                    maxAxisValue = maxMillions.coerceAtLeast(2f),
+                    bars = bars
                 )
-            )
-            IncomePeriod.YEAR -> IncomePeriodData(
-                period = IncomePeriod.YEAR,
-                heroLabel = "DÒNG THU NHẬP NĂM 2026",
-                totalFormatted = "1.480.000.000 VNĐ",
-                growthPercent = "+24.8%",
-                codFormatted = "860.000.000đ",
-                bankFormatted = "620.000.000đ",
-                avgFormatted = "123.300.000đ",
-                peakText = "Đỉnh điểm: 185tr (T11)",
-                maxAxisValue = 200f,
-                bars = listOf(
-                    IncomeBarPoint("T6", 98f, "98TR"),
-                    IncomeBarPoint("T7", 112f, "112TR"),
-                    IncomeBarPoint("T8", 125f, "125TR"),
-                    IncomeBarPoint("T9", 140f, "140TR"),
-                    IncomeBarPoint("T10", 162f, "162TR"),
-                    IncomeBarPoint("T11", 185f, "185TR")
+            }
+
+            IncomePeriod.MONTH -> {
+                // 4 weeks in November 2026 (Days > 17 are future = 0)
+                val weekRanges = listOf(
+                    Triple("01-07/11", 1..7, false),
+                    Triple("08-14/11", 8..14, false),
+                    Triple("15-17/11", 15..17, false),
+                    Triple("18-30/11", 18..30, true)
                 )
-            )
+                val weekSums = weekRanges.map { (label, range, isFuture) ->
+                    val sum = if (isFuture) 0L else deliveredOrders
+                        .filter { extractOrderDayOfMonth(it) in range }
+                        .sumOf { it.total }
+                    label to sum
+                }
+                val bars = weekSums.map { (label, sum) ->
+                    IncomeBarPoint(
+                        label = label,
+                        valueMillions = sum / 1_000_000f,
+                        displayPill = formatMillionsPill(sum)
+                    )
+                }
+                val maxMillions = (bars.maxOfOrNull { it.valueMillions } ?: 1f).coerceAtLeast(1f) * 1.2f
+                val activeWeeks = weekSums.count { it.second > 0L }.coerceAtLeast(1)
+                val avgAmount = totalRevenue / activeWeeks
+                val peak = weekSums.maxByOrNull { it.second }
+                val peakText = if (peak != null && peak.second > 0L) {
+                    "Đỉnh điểm: ${CurrencyFormatter.formatVnd(peak.second)} (${peak.first})"
+                } else {
+                    "Chưa phát sinh doanh thu"
+                }
+
+                IncomePeriodData(
+                    period = IncomePeriod.MONTH,
+                    heroLabel = "THU NHẬP THỰC TẾ THÁNG 11/2026",
+                    totalFormatted = CurrencyFormatter.formatVndFull(totalRevenue),
+                    growthPercent = "${deliveredOrders.size} đơn hoàn tất",
+                    codFormatted = CurrencyFormatter.formatVnd(codRevenue),
+                    bankFormatted = CurrencyFormatter.formatVnd(bankAndWalletRevenue),
+                    avgFormatted = CurrencyFormatter.formatVnd(avgAmount),
+                    peakText = peakText,
+                    maxAxisValue = maxMillions.coerceAtLeast(2f),
+                    bars = bars
+                )
+            }
+
+            IncomePeriod.YEAR -> {
+                val months = listOf("T7", "T8", "T9", "T10", "T11", "T12")
+                val bars = months.map { m ->
+                    val sum = if (m == "T11") totalRevenue else 0L
+                    IncomeBarPoint(
+                        label = m,
+                        valueMillions = sum / 1_000_000f,
+                        displayPill = formatMillionsPill(sum)
+                    )
+                }
+                val maxMillions = (bars.maxOfOrNull { it.valueMillions } ?: 1f).coerceAtLeast(1f) * 1.2f
+
+                IncomePeriodData(
+                    period = IncomePeriod.YEAR,
+                    heroLabel = "THU NHẬP THỰC TẾ NĂM 2026",
+                    totalFormatted = CurrencyFormatter.formatVndFull(totalRevenue),
+                    growthPercent = "${deliveredOrders.size} đơn hoàn tất",
+                    codFormatted = CurrencyFormatter.formatVnd(codRevenue),
+                    bankFormatted = CurrencyFormatter.formatVnd(bankAndWalletRevenue),
+                    avgFormatted = CurrencyFormatter.formatVnd(totalRevenue),
+                    peakText = "Tháng 11: ${CurrencyFormatter.formatVnd(totalRevenue)}",
+                    maxAxisValue = maxMillions.coerceAtLeast(2f),
+                    bars = bars
+                )
+            }
         }
     }
 
     private fun seedOrders(): List<Order> = listOf(
         Order(
             id = "DH-9821",
-            timeAgo = "10 phút trước",
+            timeAgo = "17/11/2026 • 10 phút trước",
             customerName = "Nguyễn Văn An",
             customerPhone = "0988 123 456",
             address = "45/2 Lê Văn Sỹ, P.13, Q.3, TP.HCM",
@@ -469,26 +716,24 @@ class SalesViewModel : ViewModel() {
             shippingFee = 30000L,
             paymentMethodLabel = "Thanh toán khi nhận hàng (COD)",
             paymentType = PaymentType.COD,
-            etaMinutes = 12,
-            distanceKm = 2.4
+            createdAt = "2026-11-17T14:20:00+07:00"
         ),
         Order(
             id = "DH-9820",
-            timeAgo = "25 phút trước",
+            timeAgo = "17/11/2026 • 25 phút trước",
             customerName = "Trần Thị Mai",
             customerPhone = "0912 999 888",
             address = "102 Võ Văn Tần, Q.3, TP.HCM",
-            status = OrderStatus.PLACED,
+            status = OrderStatus.PREPARING,
             items = listOf(OrderItem("Tai Nghe Chống Ồn Viễn Đông ANC", 1, 1220000L)),
             shippingFee = 30000L,
             paymentMethodLabel = "Chuyển khoản ngân hàng (VCB)",
             paymentType = PaymentType.BANK,
-            etaMinutes = 25,
-            distanceKm = 3.1
+            createdAt = "2026-11-17T11:15:00+07:00"
         ),
         Order(
             id = "DH-9819",
-            timeAgo = "2 giờ trước",
+            timeAgo = "16/11/2026 • 16:40",
             customerName = "Lê Hoàng Long",
             customerPhone = "0933 444 555",
             address = "78 Nguyễn Thị Minh Khai, Q.1, TP.HCM",
@@ -497,36 +742,33 @@ class SalesViewModel : ViewModel() {
             shippingFee = 30000L,
             paymentMethodLabel = "Ví điện tử MoMo",
             paymentType = PaymentType.WALLET,
-            etaMinutes = 0,
-            distanceKm = 1.2
+            createdAt = "2026-11-16T16:40:00+07:00"
         ),
         Order(
             id = "DH-9818",
-            timeAgo = "Hôm qua",
+            timeAgo = "15/11/2026 • 14:10",
             customerName = "Phạm Quốc Bảo",
             customerPhone = "0977 111 222",
             address = "12 Đường số 5, Q.7, TP.HCM",
             status = OrderStatus.CANCELLED,
-            items = listOf(OrderItem("Combo Áo Polo Doanh Nghiệp", 5, 420000L)),
+            items = listOf(OrderItem("Áo Polo Đồng Phục Doanh Nghiệp", 5, 420000L)),
             shippingFee = 0L,
             paymentMethodLabel = "Thanh toán khi nhận hàng (COD)",
             paymentType = PaymentType.COD,
-            etaMinutes = 0,
-            distanceKm = 6.5
+            createdAt = "2026-11-15T14:10:00+07:00"
         ),
         Order(
             id = "DH-9817",
-            timeAgo = "Hôm qua",
+            timeAgo = "14/11/2026 • 09:30",
             customerName = "Đặng Thu Thảo",
             customerPhone = "0908 777 666",
             address = "55 Điện Biên Phủ, Bình Thạnh, TP.HCM",
             status = OrderStatus.DELIVERED,
-            items = listOf(OrderItem("Củ Sạc Nhanh GaN 65W Viễn Đông", 2, 325000L)),
+            items = listOf(OrderItem("Củ Sạc Nhanh GaN 65W Chính Hãng", 2, 325000L)),
             shippingFee = 30000L,
             paymentMethodLabel = "Thanh toán khi nhận hàng (COD)",
             paymentType = PaymentType.COD,
-            etaMinutes = 0,
-            distanceKm = 3.8
+            createdAt = "2026-11-14T09:30:00+07:00"
         )
     )
 
@@ -593,63 +835,7 @@ class SalesViewModel : ViewModel() {
         )
     )
 
-    private fun seedCalendarDays(): List<CalendarDaySummary> = listOf(
-        CalendarDaySummary(11, "Thg 11", "Ngày 11/11/2026", 18, 18, 0),
-        CalendarDaySummary(12, "Thg 11", "Ngày 12/11/2026", 9, 9, 0),
-        CalendarDaySummary(13, "Thg 11", "Ngày 13/11/2026", 14, 14, 0),
-        CalendarDaySummary(14, "Thg 11", "Ngày 14/11/2026", 11, 10, 1),
-        CalendarDaySummary(15, "Thg 11", "Ngày 15/11/2026", 12, 10, 2),
-        CalendarDaySummary(16, "Thg 11", "Ngày 16/11/2026", 7, 5, 2),
-        CalendarDaySummary(17, "Thg 11", "Ngày 17/11/2026", 5, 3, 2)
-    )
-
-    private fun seedTransactions(): List<PaymentTransaction> = listOf(
-        PaymentTransaction(
-            id = "tx-1",
-            orderCode = "#DH-9821",
-            methodTitle = "Đơn #DH-9821 (COD)",
-            subtitle = "15/11/2026 - Thu bởi Shipper",
-            amount = 450000L,
-            paymentType = PaymentType.COD
-        ),
-        PaymentTransaction(
-            id = "tx-2",
-            orderCode = "#DH-9820",
-            methodTitle = "Đơn #DH-9820 (Chuyển khoản)",
-            subtitle = "15/11/2026 - Ngân hàng Vietcombank",
-            amount = 1250000L,
-            paymentType = PaymentType.BANK
-        ),
-        PaymentTransaction(
-            id = "tx-3",
-            orderCode = "#DH-9819",
-            methodTitle = "Đơn #DH-9819 (Ví MoMo)",
-            subtitle = "15/11/2026 - Ví điện tử",
-            amount = 850000L,
-            paymentType = PaymentType.WALLET
-        )
-    )
-
-    private fun seedNotifications(): List<NotificationItem> = listOf(
-        NotificationItem(
-            id = "n-1",
-            title = "Shipper đang giao #DH-9821",
-            message = "Đơn hàng của Nguyễn Văn An đang trên đường Lê Văn Sỹ, dự kiến giao sau 12 phút.",
-            timeAgo = "10 phút trước",
-            isAlert = true
-        ),
-        NotificationItem(
-            id = "n-2",
-            title = "Đơn mới #DH-9820 đã thanh toán VCB",
-            message = "Trần Thị Mai đã chuyển khoản 1.250.000đ. Chờ xuất kho đóng gói.",
-            timeAgo = "25 phút trước"
-        ),
-        NotificationItem(
-            id = "n-3",
-            title = "Cảnh báo tồn kho thấp",
-            message = "Hub USB-C 7-in-1 (còn 8) và Củ Sạc GaN 65W (còn 6) cần nhập thêm.",
-            timeAgo = "1 giờ trước",
-            isAlert = true
-        )
-    )
+    companion object {
+        const val TODAY_DAY = 17
+    }
 }

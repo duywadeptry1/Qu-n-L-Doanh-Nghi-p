@@ -26,7 +26,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="QUY TRÌNH BÁN HÀNG TRỰC TUYẾN"
+                    android:text="LỘ TRÌNH XỬ LÝ ĐƠN HÀNG 4 BƯỚC"
                     android:textColor="@color/primary_blue"
                     android:textSize="11.5sp"
                     android:textStyle="bold" />
@@ -56,7 +56,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Trực quan hoá toàn bộ vòng đời đơn hàng từ lúc khách đặt đến khi tiền về tài khoản Vietcombank của Viễn Đông."
+            android:text="Lộ trình xử lý đơn hàng chuẩn xác từ lúc khách đặt hàng đến khi đơn hàng đến tay khách hàng và ghi nhận vào thống kê thu nhập."
             android:textColor="@color/text_muted"
             android:textSize="13sp" />
 
@@ -89,7 +89,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="1. Tiếp nhận &amp; Xác thực đơn hàng"
+                    android:text="1. Khách hàng đặt hàng"
                     android:textColor="@color/text_primary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -98,7 +98,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Đồng bộ đơn đa kênh, tự động trừ tồn kho khả dụng &amp; gửi xác nhận."
+                    android:text="Hệ thống tiếp nhận đơn đặt hàng mới, tự động trừ tồn kho sản phẩm và thông báo trên chuông."
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -133,7 +133,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="2. Xuất kho &amp; Đóng gói chuẩn B2B"
+                    android:text="2. Duyệt đơn và chuẩn bị hàng"
                     android:textColor="@color/text_primary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -142,7 +142,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Kiểm tra mã SKU, in tem vận đơn và bàn giao cho đối tác giao hàng."
+                    android:text="Xác nhận duyệt đơn hàng, kiểm tra mã SKU tại kho và đóng gói kiện hàng."
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -177,7 +177,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="3. Giao vận &amp; Định vị Shipper GPS"
+                    android:text="3. Giao cho đơn vị vận chuyển"
                     android:textColor="@color/text_primary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -186,7 +186,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Theo dõi vị trí shipper thực tế theo lộ trình &amp; ước tính thời gian giao."
+                    android:text="Bàn giao kiện hàng cho đơn vị vận chuyển để tiến hành giao đến địa chỉ khách hàng."
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -221,7 +221,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="4. Thu tiền COD / Chuyển khoản &amp; Đối soát"
+                    android:text="4. Đơn hàng đã đến tay khách hàng (Thành công)"
                     android:textColor="@color/text_primary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -230,7 +230,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Ghi nhận nhật ký doanh thu theo ngày/tuần và chuyển về TK Vietcombank."
+                    android:text="Khách hàng nhận hàng thành công • Tự động cập nhật vào bảng thống kê thu nhập và lịch theo ngày."
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp" />
             </LinearLayout>

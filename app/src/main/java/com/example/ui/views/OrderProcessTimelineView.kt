@@ -15,7 +15,7 @@ class OrderProcessTimelineView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
-    private var currentStatus: OrderStatus = OrderStatus.DELIVERING
+    private var currentStatus: OrderStatus = OrderStatus.PLACED
     private val density = resources.displayMetrics.density
     private val sp = resources.displayMetrics.scaledDensity
 
@@ -40,7 +40,7 @@ class OrderProcessTimelineView @JvmOverloads constructor(
     }
 
     private val stepLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = 10.5f * sp
+        textSize = 10.2f * sp
         textAlign = Paint.Align.CENTER
     }
 
@@ -54,13 +54,14 @@ class OrderProcessTimelineView @JvmOverloads constructor(
         if (width == 0 || height == 0) return
 
         val steps = if (currentStatus == OrderStatus.CANCELLED) {
-            listOf("Đặt hàng", "Xác nhận", "Đã huỷ")
+            listOf("Đặt hàng", "Duyệt đơn", "Đã huỷ")
         } else {
-            listOf("Đặt hàng", "Đóng gói", "Đang giao", "Hoàn tất")
+            listOf("Đặt hàng", "Chuẩn bị", "Giao ĐVVC", "Đã nhận")
         }
 
         val activeStepIndex = when (currentStatus) {
             OrderStatus.PLACED -> 0
+            OrderStatus.PREPARING -> 1
             OrderStatus.DELIVERING -> 2
             OrderStatus.DELIVERED -> 3
             OrderStatus.CANCELLED -> 2
@@ -68,6 +69,7 @@ class OrderProcessTimelineView @JvmOverloads constructor(
 
         val activeColor = when (currentStatus) {
             OrderStatus.PLACED -> Color.parseColor("#2563EB")
+            OrderStatus.PREPARING -> Color.parseColor("#4F46E5")
             OrderStatus.DELIVERING -> Color.parseColor("#EA8C00")
             OrderStatus.DELIVERED -> Color.parseColor("#059669")
             OrderStatus.CANCELLED -> Color.parseColor("#DC2626")

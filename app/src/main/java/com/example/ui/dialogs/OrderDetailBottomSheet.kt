@@ -19,6 +19,7 @@ import com.example.viewmodel.SalesViewModel
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class OrderDetailBottomSheet : BottomSheetDialogFragment() {
 
@@ -64,13 +65,6 @@ class OrderDetailBottomSheet : BottomSheetDialogFragment() {
         binding.btnCloseX.setOnClickListener { dismiss() }
         binding.btnCloseBottom.setOnClickListener { dismiss() }
 
-        binding.layoutDeliveryBanner.setOnClickListener {
-            openMapForOrder(orderId)
-        }
-        binding.btnOpenMap.setOnClickListener {
-            openMapForOrder(orderId)
-        }
-
         binding.btnCallCustomer.setOnClickListener {
             val current = viewModel.getOrderById(orderId) ?: return@setOnClickListener
             val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${current.customerPhone.replace(" ", "")}"))
@@ -80,27 +74,51 @@ class OrderDetailBottomSheet : BottomSheetDialogFragment() {
         }
 
         binding.btnAdvanceOrderStatus.setOnClickListener {
-            val updated = viewModel.advanceOrderStatus(orderId)
-            if (updated != null) {
-                bindOrder(updated)
-                val msg = when (updated.status) {
-                    OrderStatus.DELIVERING -> "Đã chuyển đơn #${updated.id} sang Đang giao hàng"
-                    OrderStatus.DELIVERED -> "Đã hoàn tất giao hàng & ghi nhận doanh thu #${updated.id}"
-                    else -> "Đã cập nhật trạng thái đơn hàng"
-                }
-                Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+            val current = viewModel.getOrderById(orderId) ?: return@setOnClickListener
+            val (nextTitle, nextMessage) = when (current.status) {
+                OrderStatus.PLACED ->
+                    "Xác nhận Duyệt & Chuẩn bị hàng" to
+                        "Bạn xác nhận duyệt đơn #${current.id} của khách hàng ${current.customerName} và chuyển sang bước chuẩn bị hàng?"
+                OrderStatus.PREPARING ->
+                    "Xác nhận Giao cho ĐVVC" to
+                        "Đơn hàng #${current.id} đã đóng gói xong và sẵn sàng bàn giao cho đơn vị vận chuyển?"
+                OrderStatus.DELIVERING ->
+                    "Xác nhận Đơn đã đến tay khách" to
+                        "Xác nhận đơn hàng #${current.id} đã giao đến tay khách hàng thành công và ghi nhận doanh thu ${CurrencyFormatter.formatVnd(current.total)}?"
+                else -> return@setOnClickListener
             }
+
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(nextTitle)
+                .setMessage(nextMessage)
+                .setPositiveButton("Xác nhận") { _, _ ->
+                    val updated = viewModel.advanceOrderStatus(orderId)
+                    if (updated != null) {
+                        bindOrder(updated)
+                        val msg = when (updated.status) {
+                            OrderStatus.PREPARING -> "Đã duyệt đơn #${updated.id} & chuyển sang Chuẩn bị hàng"
+                            OrderStatus.DELIVERING -> "Đã bàn giao đơn #${updated.id} cho đơn vị vận chuyển"
+                            OrderStatus.DELIVERED -> "Đơn #${updated.id} đã đến tay khách hàng • Đã ghi nhận thu nhập!"
+                            else -> "Đã cập nhật trạng thái đơn hàng"
+                        }
+                        Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .setNegativeButton("Huỷ", null)
+                .show()
         }
 
         binding.btnEditStatus.setOnClickListener {
             val statusOptions = arrayOf(
-                "Mới đặt (PLACED)",
-                "Đang giao (DELIVERING)",
-                "Đã giao (DELIVERED)",
-                "Đã huỷ (CANCELLED)"
+                "1. Khách hàng đặt hàng (PLACED)",
+                "2. Duyệt đơn & Chuẩn bị hàng (PREPARING)",
+                "3. Giao cho đơn vị vận chuyển (DELIVERING)",
+                "4. Đơn hàng đã đến tay khách hàng (DELIVERED)",
+                "5. Đã huỷ đơn (CANCELLED)"
             )
             val statusValues = arrayOf(
                 OrderStatus.PLACED,
+                OrderStatus.PREPARING,
                 OrderStatus.DELIVERING,
                 OrderStatus.DELIVERED,
                 OrderStatus.CANCELLED
@@ -109,8 +127,8 @@ class OrderDetailBottomSheet : BottomSheetDialogFragment() {
             val currentOrder = viewModel.getOrderById(orderId)
             val selectedIndex = statusValues.indexOf(currentOrder?.status).coerceAtLeast(0)
 
-            com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Chỉnh sửa trạng thái đơn #${orderId}")
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Xác nhận đổi trạng thái đơn #${orderId}")
                 .setSingleChoiceItems(statusOptions, selectedIndex) { dialog, which ->
                     val chosenStatus = statusValues[which]
                     val updated = viewModel.updateOrderStatus(orderId, chosenStatus)
@@ -118,13 +136,13 @@ class OrderDetailBottomSheet : BottomSheetDialogFragment() {
                         bindOrder(updated)
                         Toast.makeText(
                             requireContext(),
-                            "Đã cập nhật trạng thái đơn thành: ${chosenStatus.label}",
+                            "Đã xác nhận trạng thái đơn #${orderId}: ${chosenStatus.label}",
                             Toast.LENGTH_SHORT
                         ).show()
                     }
                     dialog.dismiss()
                 }
-                .setNegativeButton("Hủy", null)
+                .setNegativeButton("Đóng", null)
                 .show()
         }
     }
@@ -141,41 +159,47 @@ class OrderDetailBottomSheet : BottomSheetDialogFragment() {
 
         binding.orderTimelineView.setStatus(order.status)
 
-        // Banner styling & copy by status
         when (order.status) {
-            OrderStatus.DELIVERING -> {
-                binding.layoutDeliveryBanner.setBackgroundResource(R.drawable.bg_delivery_banner_amber)
-                binding.ivBannerIcon.setImageResource(R.drawable.ic_truck)
-                binding.tvBannerTitle.text = getString(R.string.delivery_status_delivering)
-                binding.tvBannerSubtitle.text = getString(R.string.delivery_status_delivering_sub)
-                binding.btnAdvanceOrderStatus.visibility = View.VISIBLE
-                binding.btnAdvanceOrderStatus.text = "Xác nhận Đã giao & Thu tiền"
-            }
             OrderStatus.PLACED -> {
                 binding.layoutDeliveryBanner.setBackgroundResource(R.drawable.bg_delivery_banner_blue)
                 binding.ivBannerIcon.setImageResource(R.drawable.ic_doc)
-                binding.tvBannerTitle.text = "Đơn mới đặt • Chờ xuất kho"
-                binding.tvBannerSubtitle.text = "Bấm vào đây để xem tuyến đường dự kiến"
+                binding.tvBannerTitle.text = "Bước 1: Khách hàng đặt hàng"
+                binding.tvBannerSubtitle.text = "Đơn hàng mới tạo (${order.timeAgo}) • Chờ duyệt & chuẩn bị hàng"
                 binding.btnAdvanceOrderStatus.visibility = View.VISIBLE
-                binding.btnAdvanceOrderStatus.text = "Xuất kho & Giao cho Shipper"
+                binding.btnAdvanceOrderStatus.text = "Xác nhận: Duyệt đơn & Chuẩn bị hàng"
+            }
+            OrderStatus.PREPARING -> {
+                binding.layoutDeliveryBanner.setBackgroundResource(R.drawable.bg_delivery_banner_blue)
+                binding.ivBannerIcon.setImageResource(R.drawable.ic_products)
+                binding.tvBannerTitle.text = "Bước 2: Đang duyệt & chuẩn bị hàng"
+                binding.tvBannerSubtitle.text = "Đang đóng gói sản phẩm tại kho • Sẵn sàng bàn giao ĐVVC"
+                binding.btnAdvanceOrderStatus.visibility = View.VISIBLE
+                binding.btnAdvanceOrderStatus.text = "Xác nhận: Giao cho đơn vị vận chuyển"
+            }
+            OrderStatus.DELIVERING -> {
+                binding.layoutDeliveryBanner.setBackgroundResource(R.drawable.bg_delivery_banner_amber)
+                binding.ivBannerIcon.setImageResource(R.drawable.ic_truck)
+                binding.tvBannerTitle.text = "Bước 3: Đã giao cho đơn vị vận chuyển"
+                binding.tvBannerSubtitle.text = "Đơn vị vận chuyển đang giao hàng đến địa chỉ khách hàng"
+                binding.btnAdvanceOrderStatus.visibility = View.VISIBLE
+                binding.btnAdvanceOrderStatus.text = "Xác nhận: Đơn đã đến tay khách hàng"
             }
             OrderStatus.DELIVERED -> {
                 binding.layoutDeliveryBanner.setBackgroundResource(R.drawable.bg_delivery_banner_green)
                 binding.ivBannerIcon.setImageResource(R.drawable.ic_check_circle)
-                binding.tvBannerTitle.text = "Đã giao hàng thành công"
-                binding.tvBannerSubtitle.text = "Bấm để xem lại lộ trình giao vận hoàn tất"
+                binding.tvBannerTitle.text = "Bước 4: Đơn hàng đã đến tay khách hàng"
+                binding.tvBannerSubtitle.text = "Giao hàng thành công • Đã cộng vào thống kê thu nhập"
                 binding.btnAdvanceOrderStatus.visibility = View.GONE
             }
             OrderStatus.CANCELLED -> {
                 binding.layoutDeliveryBanner.setBackgroundResource(R.drawable.bg_delivery_banner_red)
                 binding.ivBannerIcon.setImageResource(R.drawable.ic_cancel_circle)
                 binding.tvBannerTitle.text = "Đơn hàng đã huỷ"
-                binding.tvBannerSubtitle.text = "Khách hàng yêu cầu huỷ trước khi xuất kho"
+                binding.tvBannerSubtitle.text = "Đơn hàng đã bị huỷ • Không tính vào doanh thu"
                 binding.btnAdvanceOrderStatus.visibility = View.GONE
             }
         }
 
-        // Populate ordered products
         binding.layoutOrderedItemsContainer.removeAllViews()
         val inflater = LayoutInflater.from(requireContext())
         order.items.forEach { item ->
@@ -189,11 +213,6 @@ class OrderDetailBottomSheet : BottomSheetDialogFragment() {
             row.tvItemProductPrice.text = CurrencyFormatter.formatVnd(item.unitPrice)
             binding.layoutOrderedItemsContainer.addView(row.root)
         }
-    }
-
-    private fun openMapForOrder(orderId: String) {
-        ShipperMapBottomSheet.newInstance(orderId)
-            .show(parentFragmentManager, "shipper_map")
     }
 
     override fun onDestroyView() {

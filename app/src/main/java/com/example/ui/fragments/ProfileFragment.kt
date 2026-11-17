@@ -11,11 +11,13 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import com.example.api.RetrofitClient
 import com.example.databinding.FragmentProfileBinding
 import com.example.ui.dialogs.ProcessBlueprintBottomSheet
 import com.example.viewmodel.SalesViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.launch
 
 class ProfileFragment : Fragment() {
 
@@ -35,16 +37,13 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        updateServerUrlText()
+        checkAndDisplayStatus()
 
         binding.btnCopyShortName.setOnClickListener {
             copyText("Tên doanh nghiệp", "Cty TNHH Viễn Đông")
         }
         binding.btnCopyTaxId.setOnClickListener {
             copyText("Mã số thuế", "0318492015")
-        }
-        binding.btnCopyBizCode.setOnClickListener {
-            copyText("Mã doanh nghiệp", "0318492015-001")
         }
         binding.btnCopyEmail.setOnClickListener {
             copyText("Email liên hệ", "seller@viendong.vn")
@@ -68,39 +67,62 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    private fun updateServerUrlText() {
-        binding.tvCurrentServerUrl.text = "URL kết nối hiện tại:\n${RetrofitClient.getBaseUrl()}"
+    private fun updateServerUrlText(statusLine: String? = null) {
+        val base = "URL kết nối hiện tại:\n${RetrofitClient.getBaseUrl()}"
+        binding.tvCurrentServerUrl.text = if (statusLine != null) "$base\n$statusLine" else base
     }
 
     private fun showServerIpDialog() {
         val context = requireContext()
         val presets = arrayOf(
-            "1. 10.0.2.2:5000 (Android Emulator)",
-            "2. 192.168.50.128:5000 (Wi-Fi máy tính)",
-            "3. localhost:5000 (Localhost)",
+            "1. Cáp USB (127.0.0.1:5000 – tự động qua adb reverse)",
+            "2. Wi-Fi LAN (192.168.0.101:5000 – cùng mạng Wi-Fi)",
+            "3. Android Emulator (10.0.2.2:5000)",
             "4. Tự nhập IP khác..."
-        )
-        val presetUrls = arrayOf(
-            "http://10.0.2.2:5000/api/",
-            "http://192.168.50.128:5000/api/",
-            "http://localhost:5000/api/",
-            ""
         )
 
         MaterialAlertDialogBuilder(context)
             .setTitle("Chọn IP Backend Server (MongoDB)")
             .setItems(presets) { _, which ->
-                if (which == 3) {
-                    showCustomIpInputDialog()
-                } else {
-                    val url = presetUrls[which]
-                    viewModel.updateServerIp(url)
-                    updateServerUrlText()
-                    Toast.makeText(context, "Đã lưu & chuyển sang: $url", Toast.LENGTH_SHORT).show()
+                when (which) {
+                    0 -> applyServerUrl(RetrofitClient.USB_LOCALHOST_URL)
+                    1 -> applyServerUrl(RetrofitClient.LAN_FALLBACK_URL)
+                    2 -> applyServerUrl(RetrofitClient.EMULATOR_URL)
+                    else -> showCustomIpInputDialog()
                 }
             }
             .setNegativeButton("Hủy", null)
             .show()
+    }
+
+    private fun applyServerUrl(hostOrUrl: String) {
+        viewModel.updateServerIp(hostOrUrl)
+        onServerUrlChanged()
+    }
+
+    /** Refreshes the label and pings /api/health so the user gets immediate feedback. */
+    private fun onServerUrlChanged() {
+        val url = RetrofitClient.getBaseUrl()
+        Toast.makeText(requireContext(), "Đang kiểm tra kết nối tới $url ...", Toast.LENGTH_SHORT).show()
+        checkAndDisplayStatus(showToast = true)
+    }
+
+    private fun checkAndDisplayStatus(showToast: Boolean = false) {
+        updateServerUrlText("⏳ Đang kiểm tra kết nối...")
+        viewLifecycleOwner.lifecycleScope.launch {
+            val (ok, message) = viewModel.checkBackendConnection()
+            if (_binding == null) return@launch
+            val statusLine = if (ok) {
+                "✅ Đã kết nối Backend ($message)"
+            } else {
+                "❌ Lỗi kết nối: $message"
+            }
+            updateServerUrlText(statusLine)
+            if (showToast) {
+                val ctx = context ?: return@launch
+                Toast.makeText(ctx, statusLine, Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun showCustomIpInputDialog() {
@@ -108,19 +130,17 @@ class ProfileFragment : Fragment() {
         val input = EditText(context).apply {
             setText(RetrofitClient.getBaseUrl())
             setSelection(text.length)
-            hint = "Ví dụ: 192.168.1.100:5000"
+            hint = "Ví dụ: 192.168.0.101:5000"
         }
 
         MaterialAlertDialogBuilder(context)
             .setTitle("Nhập IP tùy chỉnh")
-            .setMessage("Nhập địa chỉ IP máy tính đang chạy start-backend.bat:")
+            .setMessage("Nhập IP LAN của máy tính đang chạy backend (xem dòng 📱 trong log của npm run dev):")
             .setView(input)
             .setPositiveButton("Lưu & Kết nối") { dialog, _ ->
                 val newIp = input.text.toString().trim()
                 if (newIp.isNotBlank()) {
-                    viewModel.updateServerIp(newIp)
-                    updateServerUrlText()
-                    Toast.makeText(context, "Đã cập nhật Server IP: $newIp", Toast.LENGTH_SHORT).show()
+                    applyServerUrl(newIp)
                 }
                 dialog.dismiss()
             }

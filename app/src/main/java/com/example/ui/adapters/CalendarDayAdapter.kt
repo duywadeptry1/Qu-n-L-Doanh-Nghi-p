@@ -13,7 +13,7 @@ class CalendarDayAdapter(
 ) : RecyclerView.Adapter<CalendarDayAdapter.DayViewHolder>() {
 
     private var days: List<CalendarDaySummary> = emptyList()
-    private var selectedDayNumber: Int = 15
+    private var selectedDayNumber: Int = 17
 
     fun submitList(newDays: List<CalendarDaySummary>, selectedDay: Int) {
         days = newDays
@@ -40,17 +40,46 @@ class CalendarDayAdapter(
 
         fun bind(item: CalendarDaySummary, isSelected: Boolean) {
             val ctx = binding.root.context
-            binding.tvMonthLabel.text = item.monthLabel
-            binding.tvDayNumber.text = item.dayNumber.toString()
+            binding.tvMonthLabel.text = if (item.dayNumber == 17) "Hôm nay" else item.monthLabel
+            binding.tvDayNumber.text = String.format("%02d", item.dayNumber)
+
+            binding.tvDayBadge.text = when {
+                item.isFuture -> "--"
+                item.totalOrders > 0 -> "${item.totalOrders} đơn"
+                else -> "0 đơn"
+            }
+
+            binding.containerDay.alpha = if (item.isFuture && !isSelected) 0.55f else 1.0f
 
             if (isSelected) {
                 binding.containerDay.setBackgroundResource(R.drawable.bg_calendar_day_selected)
                 binding.tvMonthLabel.setTextColor(ContextCompat.getColor(ctx, R.color.blue_icon_bg))
                 binding.tvDayNumber.setTextColor(ContextCompat.getColor(ctx, R.color.white))
+                binding.tvDayBadge.setTextColor(ContextCompat.getColor(ctx, R.color.white))
             } else {
                 binding.containerDay.setBackgroundResource(R.drawable.bg_calendar_day_normal)
-                binding.tvMonthLabel.setTextColor(ContextCompat.getColor(ctx, R.color.text_hint))
-                binding.tvDayNumber.setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
+                binding.tvMonthLabel.setTextColor(
+                    ContextCompat.getColor(
+                        ctx,
+                        if (item.dayNumber == 17) R.color.primary_blue else R.color.text_hint
+                    )
+                )
+                binding.tvDayNumber.setTextColor(
+                    ContextCompat.getColor(
+                        ctx,
+                        if (item.isFuture) R.color.text_hint else R.color.text_primary
+                    )
+                )
+                binding.tvDayBadge.setTextColor(
+                    ContextCompat.getColor(
+                        ctx,
+                        when {
+                            item.isFuture -> R.color.text_hint
+                            item.totalOrders > 0 -> R.color.primary_blue
+                            else -> R.color.text_muted
+                        }
+                    )
+                )
             }
 
             binding.containerDay.setOnClickListener {

@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: viendong-sales-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: MONGODB_URI
+        sync: false # Set this value in the Render dashboard (never commit it)

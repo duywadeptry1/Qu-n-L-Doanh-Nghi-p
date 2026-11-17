@@ -159,6 +159,21 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/chip_filter_preparing"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/bg_pill_gray"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:paddingHorizontal="16dp"
+                    android:text="@string/filter_preparing"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
                     android:id="@+id/chip_filter_delivering"
                     android:layout_width="wrap_content"
                     android:layout_height="38dp"

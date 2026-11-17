@@ -6,12 +6,18 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.MainActivity
+import com.example.R
 import com.example.databinding.DialogNotificationsBinding
 import com.example.ui.adapters.NotificationAdapter
 import com.example.viewmodel.SalesViewModel
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import kotlinx.coroutines.launch
 
 class NotificationsBottomSheet : BottomSheetDialogFragment() {
 
@@ -38,10 +44,29 @@ class NotificationsBottomSheet : BottomSheetDialogFragment() {
             sheet?.setBackgroundColor(Color.TRANSPARENT)
         }
 
-        val adapter = NotificationAdapter()
+        val adapter = NotificationAdapter { notif ->
+            val orderRegex = Regex("(DH-\\d+)")
+            val match = orderRegex.find(notif.title) ?: orderRegex.find(notif.message)
+            if (match != null) {
+                val orderId = match.groupValues[1]
+                dismiss()
+                OrderDetailBottomSheet.newInstance(orderId)
+                    .show(parentFragmentManager, "order_detail")
+            } else if (notif.isAlert) {
+                dismiss()
+                (activity as? MainActivity)?.navigateToTab(R.id.nav_products)
+            }
+        }
         binding.rvNotifications.layoutManager = LinearLayoutManager(requireContext())
         binding.rvNotifications.adapter = adapter
-        adapter.submitList(viewModel.notifications.value)
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.notifications.collect { list ->
+                    adapter.submitList(list)
+                }
+            }
+        }
 
         viewModel.markNotificationsRead()
 

@@ -42,7 +42,7 @@ class SalesRepository {
             val msg = if (isEmulatorIp) {
                 "⚠️ Điện thoại thật không kết nối được 10.0.2.2. Hãy vào Hồ sơ -> Cấu hình IP và chọn IP máy tính!"
             } else {
-                "⚠️ Không thể kết nối Backend tại $currentUrl. Hãy kiểm tra start-backend.bat và Wi-Fi!"
+                "⚠️ Không thể kết nối Backend tại $currentUrl. Hãy kiểm tra backend (npm run dev) và Wi-Fi!"
             }
             Handler(Looper.getMainLooper()).post {
                 try {
@@ -50,6 +50,32 @@ class SalesRepository {
                 } catch (_: Exception) {}
             }
         }
+    }
+
+    /**
+     * Pings GET /api/health on the active URL; if unreachable, automatically probes
+     * USB localhost (127.0.0.1:5000 via adb reverse) and LAN default URL, switching
+     * to whichever responds first.
+     */
+    suspend fun checkBackendConnection(): Pair<Boolean, String> = withContext(Dispatchers.IO) {
+        var firstError = ""
+        for ((index, candidateUrl) in RetrofitClient.candidateUrls().withIndex()) {
+            try {
+                val service = if (index == 0) api else RetrofitClient.createTempApiService(candidateUrl)
+                val health = service.health()
+                if (health.status == "OK") {
+                    if (index > 0) {
+                        RetrofitClient.switchActiveUrl(candidateUrl)
+                    }
+                    return@withContext true to (health.message ?: "OK")
+                }
+            } catch (e: Exception) {
+                if (index == 0) {
+                    firstError = e.message ?: e.javaClass.simpleName
+                }
+            }
+        }
+        false to firstError
     }
 
     suspend fun fetchOrders(filter: OrderFilter = OrderFilter.ALL, search: String = ""): List<Order>? = withContext(Dispatchers.IO) {
@@ -139,6 +165,47 @@ class SalesRepository {
         }
     }
 
+    suspend fun createProductsBulk(items: List<com.example.model.BulkProductInput>): com.example.model.BulkImportOutcome = withContext(Dispatchers.IO) {
+        if (items.isEmpty()) {
+            return@withContext com.example.model.BulkImportOutcome(
+                success = false,
+                insertedCount = 0,
+                message = "Danh sách sản phẩm trống"
+            )
+        }
+        try {
+            val requests = items.map { item ->
+                CreateProductRequest(
+                    name = item.name,
+                    category = item.category,
+                    price = item.price,
+                    stock = item.stock,
+                    description = item.description,
+                    imageUrl = item.imageUrl,
+                    sku = item.sku
+                )
+            }
+            val response = api.bulkCreateProducts(com.example.api.BulkCreateProductsRequest(requests))
+            val domainProducts = response.products.map { it.toDomain() }
+            com.example.model.BulkImportOutcome(
+                success = true,
+                insertedCount = response.insertedCount,
+                skippedCount = response.skippedCount,
+                savedOffline = false,
+                message = "Đã lưu ${response.insertedCount} sản phẩm vào MongoDB",
+                products = domainProducts
+            )
+        } catch (e: Exception) {
+            handleException(e)
+            com.example.model.BulkImportOutcome(
+                success = false,
+                insertedCount = 0,
+                savedOffline = true,
+                message = e.message ?: "Không kết nối được Backend"
+            )
+        }
+    }
+
     suspend fun updateProduct(
         productId: String,
         name: String,
@@ -202,11 +269,11 @@ class SalesRepository {
     // --- MAPPERS ---
 
     private fun ApiOrder.toDomain(): Order {
-        val domainStatus = try { OrderStatus.valueOf(status) } catch (e: Exception) { OrderStatus.PLACED }
-        val domainPaymentType = try { PaymentType.valueOf(paymentType) } catch (e: Exception) { PaymentType.COD }
+        val domainStatus = try { OrderStatus.valueOf(status) } catch (_: Exception) { OrderStatus.PLACED }
+        val domainPaymentType = try { PaymentType.valueOf(paymentType) } catch (_: Exception) { PaymentType.COD }
         return Order(
             id = id,
-            timeAgo = timeAgo ?: "Vừa xong",
+            timeAgo = timeAgo ?: "17/11/2026",
             customerName = customerName,
             customerPhone = customerPhone,
             address = address,
@@ -215,8 +282,7 @@ class SalesRepository {
             shippingFee = shippingFee,
             paymentMethodLabel = paymentMethodLabel,
             paymentType = domainPaymentType,
-            etaMinutes = etaMinutes ?: 15,
-            distanceKm = distanceKm ?: 2.4
+            createdAt = createdAt ?: ""
         )
     }
 
@@ -237,7 +303,7 @@ class SalesRepository {
     }
 
     private fun ApiTransaction.toDomain(): PaymentTransaction {
-        val pType = try { PaymentType.valueOf(paymentType) } catch (e: Exception) { PaymentType.COD }
+        val pType = try { PaymentType.valueOf(paymentType) } catch (_: Exception) { PaymentType.COD }
         return PaymentTransaction(
             id = id,
             orderCode = orderCode,
@@ -253,7 +319,7 @@ class SalesRepository {
             id = id,
             title = title,
             message = message,
-            timeAgo = timeAgo ?: "Vừa xong",
+            timeAgo = timeAgo ?: "17/11/2026",
             isAlert = isAlert ?: false
         )
     }
@@ -265,7 +331,8 @@ class SalesRepository {
             fullDate = fullDateLabel,
             totalOrders = totalOrders,
             completedOrders = deliveredOrders,
-            deliveringOrders = cancelledOrders
+            deliveringOrders = cancelledOrders,
+            isFuture = isFuture ?: (dayNumber > 17)
         )
     }
 }

@@ -4,6 +4,12 @@ import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
+data class ApiHealth(
+    @Json(name = "status") val status: String,
+    @Json(name = "message") val message: String? = null
+)
+
+@JsonClass(generateAdapter = true)
 data class ApiOrderItem(
     @Json(name = "productName") val productName: String,
     @Json(name = "quantity") val quantity: Int,
@@ -22,8 +28,7 @@ data class ApiOrder(
     @Json(name = "shippingFee") val shippingFee: Long,
     @Json(name = "paymentMethodLabel") val paymentMethodLabel: String,
     @Json(name = "paymentType") val paymentType: String,
-    @Json(name = "etaMinutes") val etaMinutes: Int?,
-    @Json(name = "distanceKm") val distanceKm: Double?
+    @Json(name = "createdAt") val createdAt: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -58,7 +63,28 @@ data class CreateProductRequest(
     @Json(name = "stock") val stock: Int,
     @Json(name = "description") val description: String = "",
     @Json(name = "imageUrl") val imageUrl: String = "",
-    @Json(name = "imageResName") val imageResName: String = ""
+    @Json(name = "imageResName") val imageResName: String = "",
+    @Json(name = "sku") val sku: String = ""
+)
+
+@JsonClass(generateAdapter = true)
+data class BulkCreateProductsRequest(
+    @Json(name = "products") val products: List<CreateProductRequest>
+)
+
+@JsonClass(generateAdapter = true)
+data class BulkImportError(
+    @Json(name = "row") val row: Int = 0,
+    @Json(name = "name") val name: String = "",
+    @Json(name = "reason") val reason: String = ""
+)
+
+@JsonClass(generateAdapter = true)
+data class BulkCreateProductsResponse(
+    @Json(name = "insertedCount") val insertedCount: Int = 0,
+    @Json(name = "skippedCount") val skippedCount: Int = 0,
+    @Json(name = "errors") val errors: List<BulkImportError> = emptyList(),
+    @Json(name = "products") val products: List<ApiProduct> = emptyList()
 )
 
 @JsonClass(generateAdapter = true)
@@ -92,12 +118,14 @@ data class ApiCalendarDay(
     @Json(name = "fullDateLabel") val fullDateLabel: String,
     @Json(name = "totalOrders") val totalOrders: Int,
     @Json(name = "deliveredOrders") val deliveredOrders: Int,
-    @Json(name = "cancelledOrders") val cancelledOrders: Int
+    @Json(name = "cancelledOrders") val cancelledOrders: Int,
+    @Json(name = "isFuture") val isFuture: Boolean? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class ApiDashboardKpis(
     @Json(name = "placedCount") val placedCount: Int,
+    @Json(name = "preparingCount") val preparingCount: Int? = 0,
     @Json(name = "deliveringCount") val deliveringCount: Int,
     @Json(name = "deliveredCount") val deliveredCount: Int,
     @Json(name = "cancelledCount") val cancelledCount: Int

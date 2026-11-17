@@ -40,8 +40,8 @@ class RecentOrderAdapter(
 
         fun bind(order: Order) {
             val ctx = binding.root.context
-            binding.tvCustomerName.text = order.customerName
-            binding.tvTimeAgo.text = order.timeAgo
+            binding.tvCustomerName.text = "${order.customerName} (#${order.id})"
+            binding.tvTimeAgo.text = if (order.createdAt.isNotBlank()) "${order.createdAt} • ${order.timeAgo}" else order.timeAgo
             binding.tvCustomerPhone.text = order.customerPhone
             binding.tvCustomerAddress.text = order.address
             binding.tvOrderAmount.text = CurrencyFormatter.formatVnd(order.total)
@@ -51,6 +51,10 @@ class RecentOrderAdapter(
                 OrderStatus.PLACED -> {
                     binding.tvStatusBadge.setBackgroundResource(R.drawable.bg_pill_blue)
                     binding.tvStatusBadge.setTextColor(ContextCompat.getColor(ctx, R.color.primary_blue))
+                }
+                OrderStatus.PREPARING -> {
+                    binding.tvStatusBadge.setBackgroundResource(R.drawable.bg_pill_blue)
+                    binding.tvStatusBadge.setTextColor(ContextCompat.getColor(ctx, R.color.indigo_primary))
                 }
                 OrderStatus.DELIVERING -> {
                     binding.tvStatusBadge.setBackgroundResource(R.drawable.bg_pill_amber)

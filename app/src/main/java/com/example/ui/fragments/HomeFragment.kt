@@ -14,7 +14,6 @@ import com.example.MainActivity
 import com.example.R
 import com.example.databinding.FragmentHomeBinding
 import com.example.model.OrderFilter
-import com.example.model.OrderStatus
 import com.example.ui.adapters.CalendarDayAdapter
 import com.example.ui.adapters.RecentOrderAdapter
 import com.example.ui.dialogs.NotificationsBottomSheet
@@ -32,6 +31,7 @@ class HomeFragment : Fragment() {
 
     private lateinit var calendarAdapter: CalendarDayAdapter
     private lateinit var recentOrderAdapter: RecentOrderAdapter
+    private var hasScrolledToToday = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -112,12 +112,18 @@ class HomeFragment : Fragment() {
                     viewModel.selectOrderFilter(OrderFilter.PLACED)
                     (activity as? MainActivity)?.navigateToTab(R.id.nav_orders)
                 }
-                1 -> ProcessBlueprintBottomSheet().show(parentFragmentManager, "process_blueprint")
+                1 -> {
+                    viewModel.selectOrderFilter(OrderFilter.PREPARING)
+                    (activity as? MainActivity)?.navigateToTab(R.id.nav_orders)
+                }
                 2 -> {
                     viewModel.selectOrderFilter(OrderFilter.DELIVERING)
                     (activity as? MainActivity)?.navigateToTab(R.id.nav_orders)
                 }
-                3 -> (activity as? MainActivity)?.navigateToTab(R.id.nav_income)
+                3 -> {
+                    viewModel.selectOrderFilter(OrderFilter.DELIVERED)
+                    (activity as? MainActivity)?.navigateToTab(R.id.nav_orders)
+                }
             }
         }
     }
@@ -126,37 +132,58 @@ class HomeFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
-                    viewModel.orders.collect { orders ->
+                    combine(
+                        viewModel.orders,
+                        viewModel.calendarDays,
+                        viewModel.selectedDayNumber
+                    ) { orders, days, selectedDay ->
+                        Triple(orders, days, selectedDay)
+                    }.collect { (orders, days, selectedDay) ->
                         val kpis = viewModel.computeKpis(orders)
-                        binding.tvKpiPlacedCount.text = kpis.placedCount.toString()
+                        binding.tvKpiPlacedCount.text = (kpis.placedCount + kpis.preparingCount).toString()
                         binding.tvKpiDeliveringCount.text = kpis.deliveringCount.toString()
                         binding.tvKpiDeliveredCount.text = kpis.deliveredCount.toString()
                         binding.tvKpiCancelledCount.text = kpis.cancelledCount.toString()
 
-                        val placed = orders.count { it.status == OrderStatus.PLACED }
-                        val delivering = orders.count { it.status == OrderStatus.DELIVERING }
-                        val delivered = orders.count { it.status == OrderStatus.DELIVERED }
                         binding.salesPipelineView.setStages(
-                            placed = placed,
-                            packing = placed + 1,
-                            delivering = delivering,
-                            settled = delivered
+                            placed = kpis.placedCount,
+                            packing = kpis.preparingCount,
+                            delivering = kpis.deliveringCount,
+                            settled = kpis.deliveredCount
                         )
 
-                        recentOrderAdapter.submitList(orders.take(3))
-                    }
-                }
-
-                launch {
-                    combine(viewModel.calendarDays, viewModel.selectedDayNumber) { days, selected ->
-                        days to selected
-                    }.collect { (days, selectedDay) ->
                         calendarAdapter.submitList(days, selectedDay)
-                        val active = days.find { it.dayNumber == selectedDay } ?: days.first()
-                        binding.tvSelectedDateLabel.text = active.fullDate
-                        binding.tvSelectedDateOrders.text = "${active.totalOrders} đơn"
-                        binding.tvSelectedDateCompleted.text = "${active.completedOrders} Đã hoàn thành"
-                        binding.tvSelectedDateDelivering.text = "${active.deliveringOrders} Đang vận chuyển"
+                        if (!hasScrolledToToday && days.isNotEmpty()) {
+                            hasScrolledToToday = true
+                            val targetIdx = (selectedDay - 3).coerceAtLeast(0)
+                            binding.rvCalendarDays.post {
+                                _binding?.rvCalendarDays?.scrollToPosition(targetIdx)
+                            }
+                        }
+
+                        val active = days.find { it.dayNumber == selectedDay } ?: days.firstOrNull()
+                        if (active != null) {
+                            binding.tvSelectedDateLabel.text = active.fullDate
+                            if (active.isFuture) {
+                                binding.tvSelectedDateOrders.text = "-- (Chưa tới ngày)"
+                                binding.tvSelectedDateCompleted.text = "Chưa có dữ liệu"
+                                binding.tvSelectedDateDelivering.text = "Ngày chưa tới"
+                            } else {
+                                binding.tvSelectedDateOrders.text = "${active.totalOrders} đơn thực tế"
+                                binding.tvSelectedDateCompleted.text = "${active.completedOrders} Đã đến tay KH"
+                                binding.tvSelectedDateDelivering.text = "${active.deliveringOrders} Đang xử lý / giao"
+                            }
+                        }
+
+                        val dayOrders = viewModel.getOrdersForDay(selectedDay, orders)
+                        val displayOrders = if (dayOrders.isNotEmpty()) {
+                            dayOrders
+                        } else if (selectedDay <= SalesViewModel.TODAY_DAY) {
+                            orders.take(4)
+                        } else {
+                            emptyList()
+                        }
+                        recentOrderAdapter.submitList(displayOrders)
                     }
                 }
 

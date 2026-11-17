@@ -12,13 +12,15 @@ const orderSchema = new mongoose.Schema({
   customerName: { type: String, required: true },
   customerPhone: { type: String, required: true },
   address: { type: String, required: true },
-  status: { type: String, enum: ['PLACED', 'DELIVERING', 'DELIVERED', 'CANCELLED'], default: 'PLACED' },
+  status: {
+    type: String,
+    enum: ['PLACED', 'PREPARING', 'DELIVERING', 'DELIVERED', 'CANCELLED'],
+    default: 'PLACED'
+  },
   items: [orderItemSchema],
   shippingFee: { type: Number, default: 30000 },
   paymentMethodLabel: { type: String, required: true },
-  paymentType: { type: String, enum: ['ALL', 'COD', 'BANK', 'WALLET'], default: 'COD' },
-  etaMinutes: { type: Number, default: 20 },
-  distanceKm: { type: Number, default: 2.5 }
+  paymentType: { type: String, enum: ['ALL', 'COD', 'BANK', 'WALLET'], default: 'COD' }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Order', orderSchema);

@@ -46,7 +46,7 @@
             android:textColor="@color/amber_text"
             android:textSize="11.5sp"
             android:textStyle="bold"
-            tools:text="Đang giao" />
+            tools:text="Giao cho ĐVVC" />
     </LinearLayout>
 
     <LinearLayout
@@ -130,11 +130,26 @@
             tools:text="450.000đ" />
 
         <TextView
+            android:id="@+id/btn_quick_confirm_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:background="@drawable/bg_pill_green"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="5dp"
+            android:text="Xác nhận bước tiếp"
+            android:textColor="@color/green_primary"
+            android:textSize="11.5sp"
+            android:textStyle="bold" />
+
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/order_detail_link"
             android:textColor="@color/primary_blue"
-            android:textSize="13sp"
+            android:textSize="12.5sp"
             android:textStyle="bold" />
     </LinearLayout>
 

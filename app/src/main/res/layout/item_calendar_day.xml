@@ -2,21 +2,21 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/container_day"
-    android:layout_width="54dp"
-    android:layout_height="64dp"
+    android:layout_width="58dp"
+    android:layout_height="74dp"
     android:layout_marginEnd="8dp"
     android:background="@drawable/bg_calendar_day_normal"
     android:clickable="true"
     android:focusable="true"
     android:gravity="center"
     android:orientation="vertical"
-    android:paddingVertical="8dp">
+    android:paddingVertical="6dp">
 
     <TextView
         android:id="@+id/tv_month_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="10.5sp"
+        android:textSize="10sp"
         tools:text="Thg 11" />
 
     <TextView
@@ -26,6 +26,15 @@
         android:layout_marginTop="2dp"
         android:textSize="16sp"
         android:textStyle="bold"
-        tools:text="15" />
+        tools:text="17" />
+
+    <TextView
+        android:id="@+id/tv_day_badge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textSize="9.5sp"
+        android:textStyle="bold"
+        tools:text="4 đơn" />
 
 </LinearLayout>

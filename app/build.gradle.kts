@@ -80,6 +80,20 @@ secrets {
 
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
 
+// Automatically forward phone's localhost:5000 -> PC's localhost:5000 over USB on debug builds
+tasks.matching { it.name == "preDebugBuild" }.configureEach {
+  doLast {
+    runCatching {
+      val sdkAdb = File(System.getProperty("user.home"), "Android/Sdk/platform-tools/adb")
+      val adbPath = if (sdkAdb.canExecute()) sdkAdb.absolutePath else "adb"
+      ProcessBuilder(adbPath, "reverse", "tcp:5000", "tcp:5000")
+        .redirectErrorStream(true)
+        .start()
+        .waitFor()
+    }
+  }
+}
+
 // Some unused dependencies are commented out below instead of being removed.
 // This makes it easy to add them back in the future if needed.
 dependencies {

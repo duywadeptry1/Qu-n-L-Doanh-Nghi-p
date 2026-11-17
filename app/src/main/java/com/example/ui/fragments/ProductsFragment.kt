@@ -19,6 +19,7 @@ import com.example.R
 import com.example.databinding.FragmentProductsBinding
 import com.example.ui.adapters.ProductAdapter
 import com.example.ui.dialogs.AddProductBottomSheet
+import com.example.ui.dialogs.BulkAddProductBottomSheet
 import com.example.viewmodel.SalesViewModel
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -75,6 +76,11 @@ class ProductsFragment : Fragment() {
 
         binding.btnAddProduct.setOnClickListener {
             AddProductBottomSheet().show(parentFragmentManager, "add_product")
+        }
+
+        binding.btnBulkAddProduct.setOnClickListener {
+            BulkAddProductBottomSheet.newInstance(startWithQuickText = false)
+                .show(parentFragmentManager, "bulk_add_product")
         }
 
         binding.etProductsSearch.addTextChangedListener(object : TextWatcher {

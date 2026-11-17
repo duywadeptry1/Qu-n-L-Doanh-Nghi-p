@@ -3,8 +3,8 @@
 Backend API server kết nối trực tiếp cơ sở dữ liệu MongoDB Atlas cho ứng dụng quản lý doanh nghiệp Viễn Đông Sales.
 
 ## Cấu hình MongoDB Atlas
-- **Connection URI**: `mongodb+srv://1904duy_db_user:gcwbwiY2Qq10qRn2@l1111.vrur6g5.mongodb.net/viendong_sales?retryWrites=true&w=majority`
-- **Database Name**: `viendong_sales`
+- **Connection URI**: `mongodb+srv://1904duy_db_user:<db_password>@11111.vrur6g5.mongodb.net/viendong?retryWrites=true&w=majority`
+- **Database Name**: `viendong`
 
 ## Hướng dẫn khởi chạy Backend Server
 

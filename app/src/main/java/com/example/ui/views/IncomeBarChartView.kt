@@ -118,7 +118,11 @@ class IncomeBarChartView @JvmOverloads constructor(
 
         bars.forEachIndexed { index, point ->
             val centerX = leftPad + slotW * index + slotW / 2f
-            val ratio = (point.valueMillions / maxAxisValue).coerceIn(0.05f, 1f)
+            val ratio = if (point.valueMillions <= 0f) {
+                0.025f
+            } else {
+                (point.valueMillions / maxAxisValue).coerceIn(0.06f, 1f)
+            }
             val targetH = ratio * chartH * animProgress
             val topY = chartBottom - targetH
             val rect = RectF(

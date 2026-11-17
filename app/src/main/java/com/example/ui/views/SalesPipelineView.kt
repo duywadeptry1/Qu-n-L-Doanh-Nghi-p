@@ -25,10 +25,10 @@ class SalesPipelineView @JvmOverloads constructor(
     )
 
     private var stages: List<StageInfo> = listOf(
-        StageInfo("Tiếp nhận", 1, "#2563EB", "#DBEAFE"),
-        StageInfo("Đóng gói", 2, "#4F46E5", "#E0E7FF"),
-        StageInfo("Giao vận", 1, "#D97706", "#FEF3C7"),
-        StageInfo("Thu tiền", 2, "#059669", "#D1FAE5")
+        StageInfo("Khách đặt", 0, "#2563EB", "#DBEAFE"),
+        StageInfo("Chuẩn bị", 0, "#4F46E5", "#E0E7FF"),
+        StageInfo("Giao ĐVVC", 0, "#D97706", "#FEF3C7"),
+        StageInfo("Đã nhận", 0, "#059669", "#D1FAE5")
     )
 
     private var flowPhase = 0f
@@ -72,7 +72,7 @@ class SalesPipelineView @JvmOverloads constructor(
 
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#334155")
-        textSize = 11f * sp
+        textSize = 10.8f * sp
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
@@ -87,10 +87,10 @@ class SalesPipelineView @JvmOverloads constructor(
 
     fun setStages(placed: Int, packing: Int, delivering: Int, settled: Int) {
         stages = listOf(
-            StageInfo("Tiếp nhận", placed, "#2563EB", "#DBEAFE"),
-            StageInfo("Đóng gói", packing, "#4F46E5", "#E0E7FF"),
-            StageInfo("Giao vận", delivering, "#D97706", "#FEF3C7"),
-            StageInfo("Thu tiền", settled, "#059669", "#D1FAE5")
+            StageInfo("Khách đặt", placed, "#2563EB", "#DBEAFE"),
+            StageInfo("Chuẩn bị", packing, "#4F46E5", "#E0E7FF"),
+            StageInfo("Giao ĐVVC", delivering, "#D97706", "#FEF3C7"),
+            StageInfo("Đã nhận", settled, "#059669", "#D1FAE5")
         )
         invalidate()
     }
@@ -134,17 +134,14 @@ class SalesPipelineView @JvmOverloads constructor(
             nodeCentersX.add(padX + stepW * i)
         }
 
-        // Draw connecting line
         val startX = nodeCentersX.first()
         val endX = nodeCentersX.last()
         canvas.drawLine(startX, centerY, endX, centerY, trackPaint)
-        canvas.drawLine(startX, centerY, startX + (endX - startX) * 0.72f, centerY, activeTrackPaint)
+        canvas.drawLine(startX, centerY, endX, centerY, activeTrackPaint)
 
-        // Draw animated moving pulse dot representing live order flow
         val dotX = startX + (endX - startX) * flowPhase
         canvas.drawCircle(dotX, centerY, 4.5f * density, pulseDotPaint)
 
-        // Draw stage nodes
         stages.forEachIndexed { index, stage ->
             val cx = nodeCentersX[index]
             circlePaint.color = Color.parseColor(stage.bgHex)

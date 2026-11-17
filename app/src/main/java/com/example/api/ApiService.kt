@@ -9,6 +9,9 @@ import retrofit2.http.Query
 
 interface ApiService {
 
+    @GET("health")
+    suspend fun health(): ApiHealth
+
     @GET("orders")
     suspend fun getOrders(
         @Query("filter") filter: String? = null,
@@ -38,6 +41,9 @@ interface ApiService {
 
     @POST("products")
     suspend fun createProduct(@Body request: CreateProductRequest): ApiProduct
+
+    @POST("products/bulk")
+    suspend fun bulkCreateProducts(@Body request: BulkCreateProductsRequest): BulkCreateProductsResponse
 
     @retrofit2.http.PUT("products/{id}")
     suspend fun updateProduct(

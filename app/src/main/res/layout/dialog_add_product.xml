@@ -35,6 +35,21 @@
             app:tint="@color/text_secondary" />
     </LinearLayout>
 
+    <TextView
+        android:id="@+id/btn_switch_to_bulk_add"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_card_green_tint"
+        android:clickable="true"
+        android:focusable="true"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="10dp"
+        android:text="⚡ Cần thêm 100+ SP hoặc nhập file Excel? Bấm vào đây →"
+        android:textColor="@color/green_primary"
+        android:textSize="12.5sp"
+        android:textStyle="bold" />
+
     <!-- Image Selection & Preview Section -->
     <LinearLayout
         android:layout_width="match_parent"
@@ -184,17 +199,39 @@
             android:inputType="textUri" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_submit_product"
-        style="@style/Widget.Material3.Button.UnelevatedButton"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="52dp"
+        android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="Lưu vào MongoDB &amp; Kho hàng"
-        android:textColor="@color/white"
-        android:textSize="15sp"
-        android:textStyle="bold"
-        app:backgroundTint="@color/primary_blue"
-        app:cornerRadius="14dp" />
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_save_and_continue"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:text="Lưu &amp; Thêm tiếp"
+            android:textColor="@color/primary_blue"
+            android:textSize="13.5sp"
+            android:textStyle="bold"
+            app:backgroundTint="@color/blue_icon_bg"
+            app:cornerRadius="14dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_submit_product"
+            style="@style/Widget.Material3.Button.UnelevatedButton"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1.2"
+            android:text="Lưu sản phẩm"
+            android:textColor="@color/white"
+            android:textSize="14.5sp"
+            android:textStyle="bold"
+            app:backgroundTint="@color/primary_blue"
+            app:cornerRadius="14dp" />
+    </LinearLayout>
 
 </LinearLayout>

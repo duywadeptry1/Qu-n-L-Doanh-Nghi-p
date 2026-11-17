@@ -1,6 +1,7 @@
 package com.example.ui.adapters
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
@@ -11,7 +12,8 @@ import com.example.model.Order
 import com.example.model.OrderStatus
 
 class OrderCardAdapter(
-    private val onOrderClick: (Order) -> Unit
+    private val onOrderClick: (Order) -> Unit,
+    private val onConfirmStatusClick: ((Order) -> Unit)? = null
 ) : RecyclerView.Adapter<OrderCardAdapter.OrderViewHolder>() {
 
     private var orders: List<Order> = emptyList()
@@ -41,7 +43,8 @@ class OrderCardAdapter(
         fun bind(order: Order) {
             val ctx = binding.root.context
             binding.tvOrderCode.text = order.id
-            binding.tvOrderTime.text = "(${order.timeAgo})"
+            val dateInfo = if (order.createdAt.isNotBlank()) "${order.createdAt} • ${order.timeAgo}" else order.timeAgo
+            binding.tvOrderTime.text = "($dateInfo)"
             binding.tvOrderCustomerName.text = order.customerName
             binding.tvOrderCustomerPhone.text = " - ${order.customerPhone}"
             binding.tvOrderAddress.text = order.address
@@ -52,19 +55,35 @@ class OrderCardAdapter(
                 OrderStatus.PLACED -> {
                     binding.tvOrderStatusBadge.setBackgroundResource(R.drawable.bg_pill_blue)
                     binding.tvOrderStatusBadge.setTextColor(ContextCompat.getColor(ctx, R.color.primary_blue))
+                    binding.btnQuickConfirmStatus.visibility = View.VISIBLE
+                    binding.btnQuickConfirmStatus.text = "✓ Duyệt & CB hàng"
+                }
+                OrderStatus.PREPARING -> {
+                    binding.tvOrderStatusBadge.setBackgroundResource(R.drawable.bg_pill_blue)
+                    binding.tvOrderStatusBadge.setTextColor(ContextCompat.getColor(ctx, R.color.indigo_primary))
+                    binding.btnQuickConfirmStatus.visibility = View.VISIBLE
+                    binding.btnQuickConfirmStatus.text = "✓ Giao cho ĐVVC"
                 }
                 OrderStatus.DELIVERING -> {
                     binding.tvOrderStatusBadge.setBackgroundResource(R.drawable.bg_pill_amber)
                     binding.tvOrderStatusBadge.setTextColor(ContextCompat.getColor(ctx, R.color.amber_text))
+                    binding.btnQuickConfirmStatus.visibility = View.VISIBLE
+                    binding.btnQuickConfirmStatus.text = "✓ Đã đến tay KH"
                 }
                 OrderStatus.DELIVERED -> {
                     binding.tvOrderStatusBadge.setBackgroundResource(R.drawable.bg_pill_green)
                     binding.tvOrderStatusBadge.setTextColor(ContextCompat.getColor(ctx, R.color.green_primary))
+                    binding.btnQuickConfirmStatus.visibility = View.GONE
                 }
                 OrderStatus.CANCELLED -> {
                     binding.tvOrderStatusBadge.setBackgroundResource(R.drawable.bg_pill_red)
                     binding.tvOrderStatusBadge.setTextColor(ContextCompat.getColor(ctx, R.color.red_primary))
+                    binding.btnQuickConfirmStatus.visibility = View.GONE
                 }
+            }
+
+            binding.btnQuickConfirmStatus.setOnClickListener {
+                onConfirmStatusClick?.invoke(order) ?: onOrderClick(order)
             }
 
             binding.root.setOnClickListener { onOrderClick(order) }

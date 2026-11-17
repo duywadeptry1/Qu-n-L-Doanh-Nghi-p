@@ -1,4 +1,7 @@
 require('dotenv').config();
+const os = require('os');
+const path = require('path');
+const { execFile } = require('child_process');
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -8,19 +11,30 @@ const Order = require('./models/Order');
 const Transaction = require('./models/Transaction');
 const Notification = require('./models/Notification');
 const CalendarDay = require('./models/CalendarDay');
-const { seedDatabase } = require('./seedData');
+const {
+  seedDatabase,
+  syncTransactionsFromOrders,
+  syncNotificationsFromRealData,
+  syncMonthlyCalendarFromOrders
+} = require('./seedData');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
+
+// Log every request so you can see whether the phone actually reaches the server
+app.use((req, res, next) => {
+  console.log(`➡️  ${req.method} ${req.originalUrl} từ ${req.ip}`);
+  next();
+});
 
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI;
 
 // Connect to MongoDB Atlas
-mongoose.connect(MONGODB_URI)
+mongoose.connect(MONGODB_URI, { dbName: 'viendong' })
   .then(async () => {
-    console.log('🚀 Connected successfully to MongoDB Atlas Database!');
+    console.log(`🚀 Connected successfully to MongoDB Atlas Database (${mongoose.connection.name})!`);
     await seedDatabase();
   })
   .catch(err => {
@@ -32,13 +46,26 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Viễn Đông Sales API Server is running' });
 });
 
+async function getNextOrderId() {
+  const existing = await Order.find({}, { id: 1 }).lean();
+  let maxNum = 9821;
+  for (const item of existing) {
+    const match = typeof item.id === 'string' ? item.id.match(/^DH-(\d+)$/) : null;
+    if (match) {
+      const n = parseInt(match[1], 10);
+      if (n > maxNum) maxNum = n;
+    }
+  }
+  return `DH-${maxNum + 1}`;
+}
+
 // --- ORDERS APIs ---
 
-// GET /api/orders?filter=ALL|PLACED|DELIVERING|DELIVERED|CANCELLED&search=...
+// GET /api/orders?filter=ALL|PLACED|PREPARING|DELIVERING|DELIVERED|CANCELLED&search=...
 app.get('/api/orders', async (req, res) => {
   try {
     const { filter, search } = req.query;
-    let query = {};
+    const query = {};
     if (filter && filter !== 'ALL') {
       query.status = filter;
     }
@@ -76,48 +103,41 @@ app.post('/api/orders', async (req, res) => {
     const product = await Product.findOne({ id: productId });
     if (!product) return res.status(400).json({ error: 'Sản phẩm không tồn tại' });
 
-    const totalOrders = await Order.countDocuments();
-    const newId = `DH-${9822 + totalOrders}`;
+    const newId = await getNextOrderId();
+    const qty = Math.max(1, parseInt(quantity, 10) || 1);
 
     const paymentLabel = paymentType === 'COD' ? 'Thanh toán khi nhận hàng (COD)'
       : paymentType === 'BANK' ? 'Chuyển khoản ngân hàng (VCB)'
       : paymentType === 'WALLET' ? 'Ví điện tử MoMo' : 'Thanh toán khi nhận hàng (COD)';
 
+    const nowTime = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     const newOrder = new Order({
       id: newId,
-      timeAgo: 'Vừa xong',
+      timeAgo: `17/11/2026 • ${nowTime}`,
       customerName,
       customerPhone,
       address,
       status: 'PLACED',
       items: [{
         productName: product.name,
-        quantity: quantity,
+        quantity: qty,
         unitPrice: product.price
       }],
       shippingFee: 30000,
       paymentMethodLabel: paymentLabel,
       paymentType: paymentType || 'COD',
-      etaMinutes: 20,
-      distanceKm: 2.5
+      createdAt: new Date('2026-11-17T15:00:00+07:00')
     });
 
     await newOrder.save();
 
     // Deduct product stock & increase soldCount
-    product.stock = Math.max(0, product.stock - quantity);
-    product.soldCount += quantity;
+    product.stock = Math.max(0, product.stock - qty);
+    product.soldCount += qty;
     await product.save();
 
-    // Create Notification
-    const newNotif = new Notification({
-      id: `notif-${newId}`,
-      title: `Đơn hàng mới #${newId}`,
-      message: `${customerName} vừa đặt ${quantity}x ${product.name}.`,
-      timeAgo: 'Vừa xong',
-      isAlert: false
-    });
-    await newNotif.save();
+    await syncMonthlyCalendarFromOrders();
+    await syncNotificationsFromRealData();
 
     res.status(201).json(newOrder);
   } catch (err) {
@@ -131,37 +151,20 @@ app.patch('/api/orders/:id/status', async (req, res) => {
     const order = await Order.findOne({ id: req.params.id });
     if (!order) return res.status(404).json({ error: 'Order not found' });
 
-    let nextStatus = req.body && req.body.status ? req.body.status : order.status;
-    if (!req.body || !req.body.status) {
-      if (order.status === 'PLACED') nextStatus = 'DELIVERING';
+    let nextStatus = req.body && req.body.status ? req.body.status : null;
+    if (!nextStatus) {
+      if (order.status === 'PLACED') nextStatus = 'PREPARING';
+      else if (order.status === 'PREPARING') nextStatus = 'DELIVERING';
       else if (order.status === 'DELIVERING') nextStatus = 'DELIVERED';
+      else nextStatus = order.status;
     }
 
     order.status = nextStatus;
-    if (nextStatus === 'DELIVERED') {
-      order.etaMinutes = 0;
-    }
     await order.save();
 
-    // If delivered, auto create transaction if not present
-    if (nextStatus === 'DELIVERED') {
-      const existingTx = await Transaction.findOne({ orderCode: `#${order.id}` });
-      if (!existingTx) {
-        let totalItems = 0;
-        order.items.forEach(item => { totalItems += item.quantity * item.unitPrice; });
-        const grandTotal = totalItems + order.shippingFee;
-
-        const newTx = new Transaction({
-          id: `tx-${order.id}`,
-          orderCode: `#${order.id}`,
-          methodTitle: `Đơn #${order.id} (${order.paymentType})`,
-          subtitle: `${new Date().toLocaleDateString('vi-VN')} - Vừa đối soát thành công`,
-          amount: grandTotal,
-          paymentType: order.paymentType
-        });
-        await newTx.save();
-      }
-    }
+    await syncTransactionsFromOrders();
+    await syncMonthlyCalendarFromOrders();
+    await syncNotificationsFromRealData();
 
     res.json(order);
   } catch (err) {
@@ -175,7 +178,7 @@ app.patch('/api/orders/:id/status', async (req, res) => {
 app.get('/api/products', async (req, res) => {
   try {
     const { category, search } = req.query;
-    let query = {};
+    const query = {};
     if (category && category !== 'Tất cả') {
       query.category = category;
     }
@@ -192,21 +195,35 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
+async function getNextProductSequence() {
+  const existing = await Product.find({}, { id: 1 }).lean();
+  let maxNum = existing.length;
+  for (const item of existing) {
+    const match = typeof item.id === 'string' ? item.id.match(/^p-(\d+)$/) : null;
+    if (match) {
+      const n = parseInt(match[1], 10);
+      if (n > maxNum) maxNum = n;
+    }
+  }
+  return maxNum + 1;
+}
+
 // POST /api/products
 app.post('/api/products', async (req, res) => {
   try {
-    const { name, category, price, stock, description, imageUrl, imageResName: customImageRes } = req.body;
-    const totalProducts = await Product.countDocuments();
-    const newId = `p-${totalProducts + 1}`;
-    const nextSku = `VD-SP0${totalProducts + 1}`;
-    const defaultRes = category === 'Thời trang' ? 'img_product_tshirt' : 'img_product_electronics';
+    const { sku: customSku, name, category, price, stock, description, imageUrl, imageResName: customImageRes } = req.body;
+    const seq = await getNextProductSequence();
+    const newId = `p-${seq}`;
+    const nextSku = (customSku && String(customSku).trim()) ? String(customSku).trim() : `VD-SP${String(seq).padStart(2, '0')}`;
+    const finalCategory = (category && String(category).trim()) ? String(category).trim() : 'Thiết bị điện tử';
+    const defaultRes = finalCategory === 'Thời trang' ? 'img_product_tshirt' : 'img_product_electronics';
     const imageResName = customImageRes || defaultRes;
 
     const newProduct = new Product({
       id: newId,
       sku: nextSku,
       name,
-      category,
+      category: finalCategory,
       price,
       stock,
       soldCount: 0,
@@ -215,8 +232,86 @@ app.post('/api/products', async (req, res) => {
       imageResName
     });
     await newProduct.save();
+    await syncNotificationsFromRealData();
 
     res.status(201).json(newProduct);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/products/bulk (Import 100+ products at once from quick add or Excel)
+app.post('/api/products/bulk', async (req, res) => {
+  try {
+    const rawItems = Array.isArray(req.body) ? req.body : req.body?.products;
+    if (!Array.isArray(rawItems) || rawItems.length === 0) {
+      return res.status(400).json({ error: 'Danh sách sản phẩm trống hoặc không hợp lệ' });
+    }
+
+    let seq = await getNextProductSequence();
+    const docsToInsert = [];
+    const errors = [];
+
+    rawItems.forEach((item, index) => {
+      const rowNum = index + 1;
+      const name = item?.name ? String(item.name).trim() : '';
+      const price = Number(item?.price);
+      const parsedStock = parseInt(item?.stock, 10);
+      const stock = Number.isFinite(parsedStock) && parsedStock >= 0 ? parsedStock : 10;
+      const category = item?.category && String(item.category).trim()
+        ? String(item.category).trim()
+        : 'Thiết bị điện tử';
+
+      if (!name || !Number.isFinite(price) || price <= 0) {
+        errors.push({
+          row: rowNum,
+          name: name || `Dòng ${rowNum}`,
+          reason: !name ? 'Thiếu tên sản phẩm' : 'Giá bán phải lớn hơn 0'
+        });
+        return;
+      }
+
+      const id = `p-${seq}`;
+      const sku = item?.sku && String(item.sku).trim()
+        ? String(item.sku).trim()
+        : `VD-SP${String(seq).padStart(2, '0')}`;
+      seq++;
+
+      const defaultRes = category === 'Thời trang' ? 'img_product_tshirt' : 'img_product_electronics';
+      docsToInsert.push({
+        id,
+        sku,
+        name,
+        category,
+        price: Math.round(price),
+        stock,
+        soldCount: 0,
+        description: item?.description ? String(item.description).trim() : '',
+        imageUrl: item?.imageUrl ? String(item.imageUrl).trim() : '',
+        imageResName: item?.imageResName || defaultRes
+      });
+    });
+
+    if (docsToInsert.length === 0) {
+      return res.status(400).json({
+        error: 'Không có sản phẩm hợp lệ nào để lưu',
+        insertedCount: 0,
+        skippedCount: errors.length,
+        errors,
+        products: []
+      });
+    }
+
+    const inserted = await Product.insertMany(docsToInsert, { ordered: false });
+    await syncNotificationsFromRealData();
+    console.log(`📦 Đã nhập hàng loạt ${inserted.length} sản phẩm vào MongoDB`);
+
+    res.status(201).json({
+      insertedCount: inserted.length,
+      skippedCount: errors.length,
+      errors,
+      products: inserted
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -237,6 +332,7 @@ app.put('/api/products/:id', async (req, res) => {
     if (imageUrl !== undefined) product.imageUrl = imageUrl;
 
     await product.save();
+    await syncNotificationsFromRealData();
     res.json(product);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -252,6 +348,7 @@ app.patch('/api/products/:id/restock', async (req, res) => {
 
     product.stock += amount;
     await product.save();
+    await syncNotificationsFromRealData();
 
     res.json(product);
   } catch (err) {
@@ -264,8 +361,9 @@ app.patch('/api/products/:id/restock', async (req, res) => {
 // GET /api/transactions?type=ALL|COD|BANK|WALLET
 app.get('/api/transactions', async (req, res) => {
   try {
+    await syncTransactionsFromOrders();
     const { type } = req.query;
-    let query = {};
+    const query = {};
     if (type && type !== 'ALL') {
       query.paymentType = type;
     }
@@ -281,7 +379,7 @@ app.get('/api/transactions', async (req, res) => {
 // GET /api/notifications
 app.get('/api/notifications', async (req, res) => {
   try {
-    const notifications = await Notification.find().sort({ createdAt: -1 });
+    const notifications = await syncNotificationsFromRealData();
     res.json(notifications);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -293,29 +391,78 @@ app.get('/api/notifications', async (req, res) => {
 // GET /api/calendar
 app.get('/api/calendar', async (req, res) => {
   try {
-    const days = await CalendarDay.find().sort({ dayNumber: 1 });
+    const days = await syncMonthlyCalendarFromOrders();
     res.json(days);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// GET /api/dashboard/kpis
+// GET /api/dashboard/kpis (100% real data, no fake base offsets)
 app.get('/api/dashboard/kpis', async (req, res) => {
   try {
     const orders = await Order.find();
-    const placed = 47 + orders.filter(o => o.status === 'PLACED').length;
-    const delivering = 13 + orders.filter(o => o.status === 'DELIVERING').length;
-    const delivered = 126 + orders.filter(o => o.status === 'DELIVERED').length;
-    const cancelled = 2 + orders.filter(o => o.status === 'CANCELLED').length;
+    const placed = orders.filter(o => o.status === 'PLACED').length;
+    const preparing = orders.filter(o => o.status === 'PREPARING').length;
+    const delivering = orders.filter(o => o.status === 'DELIVERING').length;
+    const delivered = orders.filter(o => o.status === 'DELIVERED').length;
+    const cancelled = orders.filter(o => o.status === 'CANCELLED').length;
 
-    res.json({ placedCount: placed, deliveringCount: delivering, deliveredCount: delivered, cancelledCount: cancelled });
+    res.json({
+      placedCount: placed,
+      preparingCount: preparing,
+      deliveringCount: delivering,
+      deliveredCount: delivered,
+      cancelledCount: cancelled
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+function getLanAddresses() {
+  return Object.values(os.networkInterfaces())
+    .flat()
+    .filter(iface => iface && iface.family === 'IPv4' && !iface.internal)
+    .map(iface => iface.address);
+}
+
+function setupUsbReverse(port) {
+  const candidates = [
+    'adb',
+    path.join(os.homedir(), 'Android', 'Sdk', 'platform-tools', 'adb')
+  ];
+  const tryNext = index => {
+    if (index >= candidates.length) return;
+    execFile(candidates[index], ['reverse', `tcp:${port}`, `tcp:${port}`], err => {
+      if (!err) {
+        console.log(`🔌 Đã tự động bật kết nối qua cáp USB (adb reverse tcp:${port} tcp:${port})`);
+      } else {
+        tryNext(index + 1);
+      }
+    });
+  };
+  tryNext(0);
+}
+
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`📡 Backend Server running at http://localhost:${PORT}`);
   console.log(`🔗 Health Check Endpoint: http://localhost:${PORT}/api/health`);
+  setupUsbReverse(PORT);
+  const lanAddresses = getLanAddresses();
+  if (lanAddresses.length === 0) {
+    console.log('⚠️  Không tìm thấy IP LAN nào – máy tính chưa kết nối Wi-Fi/LAN?');
+  }
+  lanAddresses.forEach(ip => {
+    console.log(`📱 Nhập vào app (Hồ sơ → Cấu hình IP): ${ip}:${PORT}`);
+    console.log(`   Kiểm tra trên trình duyệt điện thoại: http://${ip}:${PORT}/api/health`);
+  });
+});
+
+server.on('error', err => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Cổng ${PORT} đang bị chiếm. Chạy: fuser -k ${PORT}/tcp rồi thử lại.`);
+    process.exit(1);
+  }
+  throw err;
 });

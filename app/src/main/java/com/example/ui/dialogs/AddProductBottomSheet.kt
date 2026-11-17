@@ -79,11 +79,20 @@ class AddProductBottomSheet : BottomSheetDialogFragment() {
             pickImageLauncher.launch("image/*")
         }
 
+        binding.btnSwitchToBulkAdd.setOnClickListener {
+            val fm = parentFragmentManager
+            dismiss()
+            BulkAddProductBottomSheet.newInstance(startWithQuickText = false)
+                .show(fm, "bulk_add_product")
+        }
+
         val existingProduct = editingProductId?.let { id ->
             viewModel.products.value.find { it.id == id }
         }
 
         if (existingProduct != null) {
+            binding.btnSwitchToBulkAdd.visibility = View.GONE
+            binding.btnSaveAndContinue.visibility = View.GONE
             binding.tvDialogTitle.text = "Chỉnh Sửa Sản Phẩm #${existingProduct.sku}"
             binding.btnSubmitProduct.text = "Cập nhật vào MongoDB & Kho"
             binding.etProductName.setText(existingProduct.name)
@@ -107,7 +116,7 @@ class AddProductBottomSheet : BottomSheetDialogFragment() {
             }
         }
 
-        binding.btnSubmitProduct.setOnClickListener {
+        fun submitForm(closeAfterSave: Boolean) {
             val name = binding.etProductName.text?.toString()?.trim().orEmpty()
             val price = binding.etProductPrice.text?.toString()?.toLongOrNull() ?: 0L
             val stock = binding.etProductStock.text?.toString()?.toIntOrNull() ?: 0
@@ -121,7 +130,7 @@ class AddProductBottomSheet : BottomSheetDialogFragment() {
                     "Vui lòng nhập tên sản phẩm và giá bán hợp lệ",
                     Toast.LENGTH_SHORT
                 ).show()
-                return@setOnClickListener
+                return
             }
 
             if (existingProduct != null) {
@@ -135,6 +144,7 @@ class AddProductBottomSheet : BottomSheetDialogFragment() {
                     imageUrl = finalImageUrl
                 )
                 Toast.makeText(requireContext(), "Đã cập nhật sản phẩm trên MongoDB!", Toast.LENGTH_SHORT).show()
+                dismiss()
             } else {
                 viewModel.addProduct(
                     name = name,
@@ -144,10 +154,27 @@ class AddProductBottomSheet : BottomSheetDialogFragment() {
                     description = description,
                     imageUrl = finalImageUrl
                 )
-                Toast.makeText(requireContext(), "Đã lưu sản phẩm mới lên MongoDB!", Toast.LENGTH_SHORT).show()
+                if (closeAfterSave) {
+                    Toast.makeText(requireContext(), "Đã lưu sản phẩm mới lên MongoDB!", Toast.LENGTH_SHORT).show()
+                    dismiss()
+                } else {
+                    Toast.makeText(requireContext(), "Đã lưu '$name'! Nhập tiếp sản phẩm mới.", Toast.LENGTH_SHORT).show()
+                    binding.etProductName.setText("")
+                    binding.etProductPrice.setText("")
+                    binding.etProductStock.setText("10")
+                    binding.etProductDescription.setText("")
+                    binding.etProductImageUrl.setText("")
+                    selectedImageUri = null
+                    binding.ivProductPreview.setImageResource(R.drawable.img_product_electronics)
+                    binding.tvImageUriHint.text = "Chưa chọn ảnh bộ sưu tập"
+                    binding.tvImageUriHint.setTextColor(resources.getColor(R.color.text_muted, null))
+                    binding.etProductName.requestFocus()
+                }
             }
-            dismiss()
         }
+
+        binding.btnSubmitProduct.setOnClickListener { submitForm(closeAfterSave = true) }
+        binding.btnSaveAndContinue.setOnClickListener { submitForm(closeAfterSave = false) }
     }
 
     override fun onDestroyView() {
