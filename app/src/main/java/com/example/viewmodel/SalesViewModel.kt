@@ -561,6 +561,15 @@ class SalesViewModel : ViewModel() {
         }
     }
 
+    fun deleteProduct(productId: String) {
+        _products.update { list -> list.filterNot { it.id == productId } }
+        recomputeDerivedData()
+        viewModelScope.launch {
+            repository.deleteProduct(productId)
+            refreshBackendData()
+        }
+    }
+
     /**
      * Computes real income statistics directly from delivered orders in `_orders`.
      */
@@ -712,7 +721,7 @@ class SalesViewModel : ViewModel() {
             customerPhone = "0988 123 456",
             address = "45/2 Lê Văn Sỹ, P.13, Q.3, TP.HCM",
             status = OrderStatus.DELIVERING,
-            items = listOf(OrderItem("Áo Thun Nam Co Giãn Premium", 2, 210000L)),
+            items = listOf(OrderItem("Chuột Không Dây Công Thái Học M331", 2, 380000L)),
             shippingFee = 30000L,
             paymentMethodLabel = "Thanh toán khi nhận hàng (COD)",
             paymentType = PaymentType.COD,
@@ -751,7 +760,7 @@ class SalesViewModel : ViewModel() {
             customerPhone = "0977 111 222",
             address = "12 Đường số 5, Q.7, TP.HCM",
             status = OrderStatus.CANCELLED,
-            items = listOf(OrderItem("Áo Polo Đồng Phục Doanh Nghiệp", 5, 420000L)),
+            items = listOf(OrderItem("Bàn Phím Cơ Bluetooth K8 Pro", 2, 1290000L)),
             shippingFee = 0L,
             paymentMethodLabel = "Thanh toán khi nhận hàng (COD)",
             paymentType = PaymentType.COD,
@@ -775,13 +784,13 @@ class SalesViewModel : ViewModel() {
     private fun seedProducts(): List<Product> = listOf(
         Product(
             id = "p-1",
-            sku = "VD-AT01",
-            name = "Áo Thun Nam Co Giãn Premium",
-            category = "Thời trang",
-            price = 210000L,
-            stock = 64,
-            soldCount = 84,
-            imageRes = R.drawable.img_product_tshirt
+            sku = "VD-BP01",
+            name = "Bàn Phím Cơ Bluetooth K8 Pro",
+            category = "Thiết bị điện tử",
+            price = 1290000L,
+            stock = 25,
+            soldCount = 45,
+            imageRes = R.drawable.img_product_electronics
         ),
         Product(
             id = "p-2",
@@ -805,13 +814,13 @@ class SalesViewModel : ViewModel() {
         ),
         Product(
             id = "p-4",
-            sku = "VD-PL04",
-            name = "Áo Polo Đồng Phục Doanh Nghiệp",
-            category = "Thời trang",
-            price = 420000L,
-            stock = 112,
-            soldCount = 45,
-            imageRes = R.drawable.img_product_tshirt
+            sku = "VD-CH04",
+            name = "Chuột Không Dây Công Thái Học M331",
+            category = "Phụ kiện",
+            price = 380000L,
+            stock = 42,
+            soldCount = 60,
+            imageRes = R.drawable.img_product_electronics
         ),
         Product(
             id = "p-5",

@@ -10,13 +10,17 @@ import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import com.example.R
 import com.example.databinding.DialogAddProductBinding
 import com.example.model.Product
+import com.example.utils.ImageUtils
 import com.example.viewmodel.SalesViewModel
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.launch
 
 class AddProductBottomSheet : BottomSheetDialogFragment() {
 
@@ -24,18 +28,35 @@ class AddProductBottomSheet : BottomSheetDialogFragment() {
     private val binding get() = _binding!!
     private val viewModel: SalesViewModel by activityViewModels()
 
-    private var selectedImageUri: Uri? = null
+    private var encodedBase64Image: String? = null
     private var editingProductId: String? = null
+
+    private val categories = listOf("Thiết bị điện tử", "Phụ kiện")
 
     private val pickImageLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            selectedImageUri = uri
             binding.ivProductPreview.setImageURI(uri)
-            binding.etProductImageUrl.setText(uri.toString())
-            binding.tvImageUriHint.text = "Đã chọn ảnh từ thư viện"
-            binding.tvImageUriHint.setTextColor(resources.getColor(R.color.green_primary, null))
+            binding.tvImageUriHint.text = "⏳ Đang nén & chuẩn bị ảnh để tải lên DB..."
+            binding.tvImageUriHint.setTextColor(resources.getColor(R.color.primary_blue, null))
+
+            viewLifecycleOwner.lifecycleScope.launch {
+                val base64 = ImageUtils.compressUriToBase64(requireContext(), uri)
+                if (_binding == null) return@launch
+
+                if (base64 != null) {
+                    encodedBase64Image = base64
+                    binding.etProductImageUrl.setText("")
+                    binding.btnRemoveImage.visibility = View.VISIBLE
+                    val approxKb = base64.length * 3 / 4 / 1024
+                    binding.tvImageUriHint.text = "✅ Đã nén thành công (~$approxKb KB) • Sẵn sàng tải lên MongoDB!"
+                    binding.tvImageUriHint.setTextColor(resources.getColor(R.color.green_primary, null))
+                } else {
+                    binding.tvImageUriHint.text = "⚠️ Không thể đọc file ảnh này, vui lòng chọn ảnh khác"
+                    binding.tvImageUriHint.setTextColor(resources.getColor(R.color.red_primary, null))
+                }
+            }
         }
     }
 
@@ -66,7 +87,6 @@ class AddProductBottomSheet : BottomSheetDialogFragment() {
 
         editingProductId = arguments?.getString(ARG_PRODUCT_ID)
 
-        val categories = listOf("Thiết bị điện tử", "Phụ kiện", "Thời trang")
         binding.spinnerProductCategory.adapter = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_spinner_dropdown_item,
@@ -77,6 +97,15 @@ class AddProductBottomSheet : BottomSheetDialogFragment() {
 
         binding.btnPickGalleryImage.setOnClickListener {
             pickImageLauncher.launch("image/*")
+        }
+
+        binding.btnRemoveImage.setOnClickListener {
+            encodedBase64Image = ""
+            binding.etProductImageUrl.setText("")
+            binding.ivProductPreview.setImageResource(R.drawable.img_product_electronics)
+            binding.tvImageUriHint.text = "Đã bỏ ảnh (dùng biểu tượng mặc định)"
+            binding.tvImageUriHint.setTextColor(resources.getColor(R.color.text_muted, null))
+            binding.btnRemoveImage.visibility = View.GONE
         }
 
         binding.btnSwitchToBulkAdd.setOnClickListener {
@@ -93,26 +122,43 @@ class AddProductBottomSheet : BottomSheetDialogFragment() {
         if (existingProduct != null) {
             binding.btnSwitchToBulkAdd.visibility = View.GONE
             binding.btnSaveAndContinue.visibility = View.GONE
+            binding.btnDeleteProduct.visibility = View.VISIBLE
             binding.tvDialogTitle.text = "Chỉnh Sửa Sản Phẩm #${existingProduct.sku}"
             binding.btnSubmitProduct.text = "Cập nhật vào MongoDB & Kho"
             binding.etProductName.setText(existingProduct.name)
             binding.etProductPrice.setText(existingProduct.price.toString())
             binding.etProductStock.setText(existingProduct.stock.toString())
             binding.etProductDescription.setText(existingProduct.description)
-            binding.etProductImageUrl.setText(existingProduct.imageUrl)
 
             val catIndex = categories.indexOf(existingProduct.category).coerceAtLeast(0)
             binding.spinnerProductCategory.setSelection(catIndex)
 
             if (existingProduct.imageUrl.isNotBlank()) {
-                try {
-                    val uri = Uri.parse(existingProduct.imageUrl)
-                    binding.ivProductPreview.setImageURI(uri)
-                } catch (_: Exception) {
-                    binding.ivProductPreview.setImageResource(existingProduct.imageRes)
-                }
+                encodedBase64Image = existingProduct.imageUrl
+                ImageUtils.loadProductImage(
+                    binding.ivProductPreview,
+                    existingProduct.imageUrl,
+                    existingProduct.imageRes
+                )
+                binding.btnRemoveImage.visibility = View.VISIBLE
+                binding.tvImageUriHint.text = "Sản phẩm đã có ảnh trên Database"
+                binding.tvImageUriHint.setTextColor(resources.getColor(R.color.green_primary, null))
             } else {
                 binding.ivProductPreview.setImageResource(existingProduct.imageRes)
+                binding.tvImageUriHint.text = "Chưa có ảnh riêng (đang dùng icon mặc định)"
+            }
+
+            binding.btnDeleteProduct.setOnClickListener {
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("Xác nhận xoá sản phẩm")
+                    .setMessage("Bạn có chắc chắn muốn xoá vĩnh viễn '${existingProduct.name}' khỏi kho hàng và cơ sở dữ liệu MongoDB?")
+                    .setPositiveButton("Xoá vĩnh viễn") { _, _ ->
+                        viewModel.deleteProduct(existingProduct.id)
+                        Toast.makeText(requireContext(), "Đã xoá '${existingProduct.name}'", Toast.LENGTH_SHORT).show()
+                        dismiss()
+                    }
+                    .setNegativeButton("Huỷ", null)
+                    .show()
             }
         }
 
@@ -122,7 +168,15 @@ class AddProductBottomSheet : BottomSheetDialogFragment() {
             val stock = binding.etProductStock.text?.toString()?.toIntOrNull() ?: 0
             val category = categories[binding.spinnerProductCategory.selectedItemPosition]
             val description = binding.etProductDescription.text?.toString()?.trim().orEmpty()
-            val finalImageUrl = selectedImageUri?.toString() ?: binding.etProductImageUrl.text?.toString()?.trim().orEmpty()
+
+            val typedUrl = binding.etProductImageUrl.text?.toString()?.trim().orEmpty()
+            val finalImageUrl = when {
+                !encodedBase64Image.isNullOrBlank() -> encodedBase64Image.orEmpty()
+                typedUrl.isNotBlank() -> typedUrl
+                existingProduct != null && encodedBase64Image == "" -> "" // explicitly removed
+                existingProduct != null -> existingProduct.imageUrl
+                else -> ""
+            }
 
             if (name.isEmpty() || price <= 0L) {
                 Toast.makeText(
@@ -139,23 +193,23 @@ class AddProductBottomSheet : BottomSheetDialogFragment() {
                     name = name,
                     category = category,
                     price = price,
-                    stock = stock.coerceAtLeast(1),
+                    stock = stock.coerceAtLeast(0),
                     description = description,
                     imageUrl = finalImageUrl
                 )
-                Toast.makeText(requireContext(), "Đã cập nhật sản phẩm trên MongoDB!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Đã cập nhật sản phẩm & ảnh lên MongoDB!", Toast.LENGTH_SHORT).show()
                 dismiss()
             } else {
                 viewModel.addProduct(
                     name = name,
                     category = category,
                     price = price,
-                    stock = stock.coerceAtLeast(1),
+                    stock = stock.coerceAtLeast(0),
                     description = description,
                     imageUrl = finalImageUrl
                 )
                 if (closeAfterSave) {
-                    Toast.makeText(requireContext(), "Đã lưu sản phẩm mới lên MongoDB!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Đã lưu sản phẩm & ảnh mới lên MongoDB!", Toast.LENGTH_SHORT).show()
                     dismiss()
                 } else {
                     Toast.makeText(requireContext(), "Đã lưu '$name'! Nhập tiếp sản phẩm mới.", Toast.LENGTH_SHORT).show()
@@ -164,10 +218,11 @@ class AddProductBottomSheet : BottomSheetDialogFragment() {
                     binding.etProductStock.setText("10")
                     binding.etProductDescription.setText("")
                     binding.etProductImageUrl.setText("")
-                    selectedImageUri = null
+                    encodedBase64Image = null
                     binding.ivProductPreview.setImageResource(R.drawable.img_product_electronics)
                     binding.tvImageUriHint.text = "Chưa chọn ảnh bộ sưu tập"
                     binding.tvImageUriHint.setTextColor(resources.getColor(R.color.text_muted, null))
+                    binding.btnRemoveImage.visibility = View.GONE
                     binding.etProductName.requestFocus()
                 }
             }

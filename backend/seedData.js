@@ -7,13 +7,13 @@ const CalendarDay = require('./models/CalendarDay');
 const initialProducts = [
   {
     id: 'p-1',
-    sku: 'VD-AT01',
-    name: 'Áo Thun Nam Co Giãn Premium',
-    category: 'Thời trang',
-    price: 210000,
-    stock: 64,
-    soldCount: 84,
-    imageResName: 'img_product_tshirt'
+    sku: 'VD-BP01',
+    name: 'Bàn Phím Cơ Bluetooth K8 Pro',
+    category: 'Thiết bị điện tử',
+    price: 1290000,
+    stock: 25,
+    soldCount: 45,
+    imageResName: 'img_product_electronics'
   },
   {
     id: 'p-2',
@@ -37,13 +37,13 @@ const initialProducts = [
   },
   {
     id: 'p-4',
-    sku: 'VD-PL04',
-    name: 'Áo Polo Đồng Phục Doanh Nghiệp',
-    category: 'Thời trang',
-    price: 420000,
-    stock: 112,
-    soldCount: 45,
-    imageResName: 'img_product_tshirt'
+    sku: 'VD-CH04',
+    name: 'Chuột Không Dây Công Thái Học M331',
+    category: 'Phụ kiện',
+    price: 380000,
+    stock: 42,
+    soldCount: 60,
+    imageResName: 'img_product_electronics'
   },
   {
     id: 'p-5',
@@ -75,7 +75,7 @@ const initialOrders = [
     customerPhone: '0988 123 456',
     address: '45/2 Lê Văn Sỹ, P.13, Q.3, TP.HCM',
     status: 'DELIVERING',
-    items: [{ productName: 'Áo Thun Nam Co Giãn Premium', quantity: 2, unitPrice: 210000 }],
+    items: [{ productName: 'Chuột Không Dây Công Thái Học M331', quantity: 2, unitPrice: 380000 }],
     shippingFee: 30000,
     paymentMethodLabel: 'Thanh toán khi nhận hàng (COD)',
     paymentType: 'COD',
@@ -114,7 +114,7 @@ const initialOrders = [
     customerPhone: '0977 111 222',
     address: '12 Đường số 5, Q.7, TP.HCM',
     status: 'CANCELLED',
-    items: [{ productName: 'Áo Polo Đồng Phục Doanh Nghiệp', quantity: 5, unitPrice: 420000 }],
+    items: [{ productName: 'Bàn Phím Cơ Bluetooth K8 Pro', quantity: 2, unitPrice: 1290000 }],
     shippingFee: 0,
     paymentMethodLabel: 'Thanh toán khi nhận hàng (COD)',
     paymentType: 'COD',
@@ -137,9 +137,12 @@ const initialOrders = [
 
 async function syncTransactionsFromOrders() {
   const deliveredOrders = await Order.find({ status: 'DELIVERED' }).sort({ createdAt: -1 });
+  const validIds = deliveredOrders.map(o => `tx-${o.id}`);
+  await Transaction.deleteMany({ id: { $nin: validIds } });
+
   for (const order of deliveredOrders) {
+    const txId = `tx-${order.id}`;
     const orderCode = `#${order.id}`;
-    const existing = await Transaction.findOne({ orderCode });
     let totalItems = 0;
     (order.items || []).forEach(item => {
       totalItems += (item.quantity || 0) * (item.unitPrice || 0);
@@ -150,21 +153,22 @@ async function syncTransactionsFromOrders() {
     const methodLabel = order.paymentType === 'BANK' ? 'Chuyển khoản'
       : order.paymentType === 'WALLET' ? 'Ví MoMo' : 'COD';
 
-    if (!existing) {
-      await Transaction.create({
-        id: `tx-${order.id}`,
-        orderCode,
-        methodTitle: `Đơn #${order.id} (${methodLabel})`,
-        subtitle: `${dateStr} - Đã giao đến tay khách & đối soát`,
-        amount: grandTotal,
-        paymentType: order.paymentType || 'COD',
-        createdAt
-      });
-    }
+    await Transaction.findOneAndUpdate(
+      { id: txId },
+      {
+        $set: {
+          id: txId,
+          orderCode,
+          methodTitle: `Đơn #${order.id} (${methodLabel})`,
+          subtitle: `${dateStr} - Đã giao đến tay khách & đối soát`,
+          amount: grandTotal,
+          paymentType: order.paymentType || 'COD',
+          createdAt: createdDate
+        }
+      },
+      { upsert: true, new: true }
+    );
   }
-  // Remove orphan transactions whose orders are not DELIVERED
-  const deliveredCodes = deliveredOrders.map(o => `#${o.id}`);
-  await Transaction.deleteMany({ orderCode: { $nin: deliveredCodes } });
 }
 
 async function syncNotificationsFromRealData() {

@@ -37,7 +37,7 @@ class BulkAddProductBottomSheet : BottomSheetDialogFragment() {
     private val binding get() = _binding!!
     private val viewModel: SalesViewModel by activityViewModels()
 
-    private val categories = listOf("Thiết bị điện tử", "Phụ kiện", "Thời trang")
+    private val categories = listOf("Thiết bị điện tử", "Phụ kiện")
     private var isExcelMode = true
     private var lastExcelUri: Uri? = null
     private var parsedItems: List<BulkProductInput> = emptyList()
@@ -136,9 +136,9 @@ class BulkAddProductBottomSheet : BottomSheetDialogFragment() {
             val sample = buildString {
                 appendLine("Chuột Không Dây Logitech M331 | 350000 | 50 | Phụ kiện | VD-CH01")
                 appendLine("Bàn Phím Cơ Bluetooth K8 Pro | 1290000 | 25 | Thiết bị điện tử | VD-BP02")
-                appendLine("Cáp Sạc Nhanh Type-C 100W 2m | 145000 | 120 | Phụ kiện")
-                appendLine("Áo Polo Đồng Phục Cao Cấp | 390000 | 80 | Thời trang")
-                append("Giá Đỡ Laptop Nhôm Nguyên Khối | 420000 | 40 | Phụ kiện")
+                appendLine("Cáp Sạc Nhanh Type-C 100W 2m | 145000 | 120 | Phụ kiện | VD-CS03")
+                appendLine("Bộ Chia Mạng Gigabit 8 Cổng | 550000 | 35 | Thiết bị điện tử | VD-CM04")
+                append("Giá Đỡ Laptop Nhôm Tản Nhiệt | 420000 | 40 | Phụ kiện | VD-GD05")
             }
             binding.etBulkQuickText.setText(sample)
         }

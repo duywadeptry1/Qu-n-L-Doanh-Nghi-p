@@ -1,6 +1,5 @@
 package com.example.ui.adapters
 
-import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,6 +9,7 @@ import com.example.R
 import com.example.databinding.ItemProductCardBinding
 import com.example.model.CurrencyFormatter
 import com.example.model.Product
+import com.example.utils.ImageUtils
 
 class ProductAdapter(
     private val onRestockClick: (Product) -> Unit,
@@ -43,23 +43,18 @@ class ProductAdapter(
         fun bind(product: Product) {
             val ctx = binding.root.context
 
-            if (product.imageUrl.isNotBlank()) {
-                try {
-                    val uri = Uri.parse(product.imageUrl)
-                    binding.ivProductThumb.setImageURI(uri)
-                } catch (_: Exception) {
-                    binding.ivProductThumb.setImageResource(product.imageRes)
-                }
-            } else {
-                binding.ivProductThumb.setImageResource(product.imageRes)
-            }
+            ImageUtils.loadProductImage(
+                imageView = binding.ivProductThumb,
+                imageUrl = product.imageUrl,
+                fallbackRes = product.imageRes
+            )
 
             binding.tvProductSku.text = "SKU: ${product.sku}"
             binding.tvProductName.text = product.name
             binding.tvProductPrice.text = CurrencyFormatter.formatVnd(product.price)
             binding.tvProductSold.text = "Đã bán: ${product.soldCount}"
             binding.tvProductCategory.text = "Danh mục: ${product.category}"
-            binding.tvProductStockCount.text = "Tồn: ${product.stock}"
+            binding.tvProductStockCount.text = "Tồn kho: ${product.stock}"
 
             if (product.description.isNotBlank()) {
                 binding.tvProductDescription.visibility = View.VISIBLE
@@ -68,18 +63,28 @@ class ProductAdapter(
                 binding.tvProductDescription.visibility = View.GONE
             }
 
-            if (product.stock <= 10) {
-                binding.tvStockStatusBadge.text = "Sắp hết"
-                binding.tvStockStatusBadge.setBackgroundResource(R.drawable.bg_pill_amber)
-                binding.tvStockStatusBadge.setTextColor(ContextCompat.getColor(ctx, R.color.amber_text))
-            } else {
-                binding.tvStockStatusBadge.text = "Còn hàng"
-                binding.tvStockStatusBadge.setBackgroundResource(R.drawable.bg_pill_green)
-                binding.tvStockStatusBadge.setTextColor(ContextCompat.getColor(ctx, R.color.green_primary))
+            when {
+                product.stock == 0 -> {
+                    binding.tvStockStatusBadge.text = "Hết hàng"
+                    binding.tvStockStatusBadge.setBackgroundResource(R.drawable.bg_pill_red)
+                    binding.tvStockStatusBadge.setTextColor(ContextCompat.getColor(ctx, R.color.red_primary))
+                }
+                product.stock <= 10 -> {
+                    binding.tvStockStatusBadge.text = "Sắp hết (${product.stock})"
+                    binding.tvStockStatusBadge.setBackgroundResource(R.drawable.bg_pill_amber)
+                    binding.tvStockStatusBadge.setTextColor(ContextCompat.getColor(ctx, R.color.amber_text))
+                }
+                else -> {
+                    binding.tvStockStatusBadge.text = "Còn hàng"
+                    binding.tvStockStatusBadge.setBackgroundResource(R.drawable.bg_pill_green)
+                    binding.tvStockStatusBadge.setTextColor(ContextCompat.getColor(ctx, R.color.green_primary))
+                }
             }
 
+            binding.btnRestockProduct.text = "+ Nhập kho"
             binding.btnRestockProduct.setOnClickListener { onRestockClick(product) }
             binding.btnEditProduct.setOnClickListener { onEditClick(product) }
+            binding.root.setOnClickListener { onEditClick(product) }
         }
     }
 }

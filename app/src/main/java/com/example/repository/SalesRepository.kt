@@ -235,6 +235,16 @@ class SalesRepository {
         }
     }
 
+    suspend fun deleteProduct(productId: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val res = api.deleteProduct(productId)
+            res.isSuccessful
+        } catch (e: Exception) {
+            handleException(e)
+            false
+        }
+    }
+
     suspend fun fetchTransactions(type: PaymentType = PaymentType.ALL): List<PaymentTransaction>? = withContext(Dispatchers.IO) {
         try {
             val typeParam = if (type != PaymentType.ALL) type.name else null

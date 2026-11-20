@@ -57,6 +57,11 @@ interface ApiService {
         @Body request: RestockRequest = RestockRequest(10)
     ): ApiProduct
 
+    @retrofit2.http.DELETE("products/{id}")
+    suspend fun deleteProduct(
+        @Path("id") id: String
+    ): retrofit2.Response<Unit>
+
     @GET("transactions")
     suspend fun getTransactions(
         @Query("type") type: String? = null

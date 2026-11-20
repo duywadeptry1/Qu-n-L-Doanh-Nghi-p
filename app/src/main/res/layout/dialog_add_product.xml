@@ -58,12 +58,12 @@
         android:background="@drawable/bg_card_subtle"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:padding="10dp">
+        android:padding="12dp">
 
         <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/iv_product_preview"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
+            android:layout_width="68dp"
+            android:layout_height="68dp"
             android:contentDescription="@string/cd_product_image"
             android:scaleType="centerCrop"
             android:src="@drawable/img_product_electronics"
@@ -76,23 +76,46 @@
             android:layout_weight="1"
             android:orientation="vertical">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_pick_gallery_image"
-                style="@style/Widget.Material3.Button.TonalButton"
+            <LinearLayout
                 android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:text="📷 Chọn ảnh từ thư viện"
-                android:textColor="@color/primary_blue"
-                android:textSize="12.5sp"
-                android:textStyle="bold"
-                app:backgroundTint="@color/blue_icon_bg"
-                app:cornerRadius="10dp" />
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_pick_gallery_image"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="📷 Chọn ảnh thư viện"
+                    android:textColor="@color/primary_blue"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="@color/blue_icon_bg"
+                    app:cornerRadius="10dp" />
+
+                <TextView
+                    android:id="@+id/btn_remove_image"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="8dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:paddingHorizontal="8dp"
+                    android:text="✕ Xoá"
+                    android:textColor="@color/red_primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/tv_image_uri_hint"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
+                android:layout_marginTop="3dp"
                 android:ellipsize="middle"
                 android:maxLines="1"
                 android:text="Chưa chọn ảnh bộ sưu tập"
@@ -233,5 +256,20 @@
             app:backgroundTint="@color/primary_blue"
             app:cornerRadius="14dp" />
     </LinearLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_delete_product"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="10dp"
+        android:text="🗑️ Xoá sản phẩm này khỏi cơ sở dữ liệu"
+        android:textColor="@color/red_primary"
+        android:textSize="13.5sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        app:backgroundTint="@color/red_icon_bg"
+        app:cornerRadius="14dp"
+        tools:visibility="visible" />
 
 </LinearLayout>

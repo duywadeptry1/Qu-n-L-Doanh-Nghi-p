@@ -530,17 +530,6 @@
                     android:textSize="13sp"
                     android:textStyle="bold" />
 
-                <TextView
-                    android:id="@+id/tv_pipeline_detail_btn"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/bg_pill_green"
-                    android:paddingHorizontal="10dp"
-                    android:paddingVertical="4dp"
-                    android:text="@string/home_pipeline_badge"
-                    android:textColor="@color/green_primary"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
             </LinearLayout>
 
             <com.example.ui.views.SalesPipelineView
