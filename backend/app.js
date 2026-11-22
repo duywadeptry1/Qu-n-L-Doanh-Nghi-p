@@ -4,28 +4,58 @@ const express = require('express');
 const cors = require('cors');
 const { createApiRouter } = require('./routes');
 
-function buildCorsOptions() {
+function normalizeOrigin(value) {
+  return String(value || '').trim().replace(/\/+$/, '');
+}
+
+function buildCorsDelegate() {
   const raw = process.env.CORS_ORIGIN;
-  if (!raw || raw.trim() === '*') {
-    return { origin: true, credentials: true };
+  const allowAll = !raw || raw.trim() === '*';
+  const allowlist = new Set(
+    (raw || '')
+      .split(',')
+      .map(normalizeOrigin)
+      .filter(Boolean)
+  );
+
+  const renderUrl = normalizeOrigin(process.env.RENDER_EXTERNAL_URL);
+  if (renderUrl) {
+    allowlist.add(renderUrl);
   }
-  const allowlist = raw.split(',').map(item => item.trim()).filter(Boolean);
-  return {
-    origin(origin, callback) {
-      // Allow non-browser clients (Android app, curl, Postman) with no Origin header
-      if (!origin || allowlist.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error(`CORS blocked for origin: ${origin}`));
-    },
-    credentials: true
+
+  return (req, callback) => {
+    const requestOrigin = normalizeOrigin(req.header('Origin'));
+
+    // Allow non-browser clients (Android app, curl, Postman) or wildcard mode
+    if (!requestOrigin || allowAll) {
+      return callback(null, { origin: true, credentials: true });
+    }
+
+    // Always allow same-origin requests (e.g. Web Portal hosted by this same Express server)
+    const host = req.get('host');
+    const forwardedProto = String(req.header('x-forwarded-proto') || req.protocol || 'https')
+      .split(',')[0]
+      .trim();
+    const sameOriginHttps = host ? `https://${host}` : '';
+    const sameOriginProto = host ? `${forwardedProto}://${host}` : '';
+
+    if (
+      requestOrigin === sameOriginHttps ||
+      requestOrigin === sameOriginProto ||
+      allowlist.has(requestOrigin)
+    ) {
+      return callback(null, { origin: true, credentials: true });
+    }
+
+    return callback(new Error(`CORS blocked for origin: ${requestOrigin}`));
   };
 }
 
 function createApp() {
   const app = express();
 
-  app.use(cors(buildCorsOptions()));
+  app.set('trust proxy', 1);
+  app.use(cors(buildCorsDelegate()));
   app.use(express.json({ limit: '15mb' }));
   app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
