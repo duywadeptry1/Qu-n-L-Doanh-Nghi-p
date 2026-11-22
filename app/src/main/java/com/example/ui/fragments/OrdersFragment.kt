@@ -107,7 +107,15 @@ class OrdersFragment : Fragment() {
         binding.chipFilterCancelled.setOnClickListener { viewModel.selectOrderFilter(OrderFilter.CANCELLED) }
 
         binding.btnCreateOrder.setOnClickListener {
-            CreateOrderBottomSheet().show(parentFragmentManager, "create_order")
+            if (!viewModel.hasTradableInventory()) {
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("🔒 Đã khóa tạo giao dịch")
+                    .setMessage("Tất cả sản phẩm trong kho hiện đã hết hàng (tồn kho = 0). Vui lòng nhập thêm hàng tại mục Kho hàng để mở khóa giao dịch.")
+                    .setPositiveButton("Đã hiểu", null)
+                    .show()
+            } else {
+                CreateOrderBottomSheet().show(parentFragmentManager, "create_order")
+            }
         }
 
         binding.etOrdersSearch.addTextChangedListener(object : TextWatcher {

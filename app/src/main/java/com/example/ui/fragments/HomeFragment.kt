@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.MainActivity
 import com.example.R
 import com.example.databinding.FragmentHomeBinding
+import com.example.model.AppClock
 import com.example.model.OrderFilter
 import com.example.ui.adapters.CalendarDayAdapter
 import com.example.ui.adapters.RecentOrderAdapter
@@ -139,6 +140,7 @@ class HomeFragment : Fragment() {
                     ) { orders, days, selectedDay ->
                         Triple(orders, days, selectedDay)
                     }.collect { (orders, days, selectedDay) ->
+                        updateDateBadges()
                         val kpis = viewModel.computeKpis(orders)
                         binding.tvKpiPlacedCount.text = (kpis.placedCount + kpis.preparingCount).toString()
                         binding.tvKpiDeliveringCount.text = kpis.deliveringCount.toString()
@@ -178,7 +180,7 @@ class HomeFragment : Fragment() {
                         val dayOrders = viewModel.getOrdersForDay(selectedDay, orders)
                         val displayOrders = if (dayOrders.isNotEmpty()) {
                             dayOrders
-                        } else if (selectedDay <= SalesViewModel.TODAY_DAY) {
+                        } else if (selectedDay <= AppClock.todayDayOfMonth()) {
                             orders.take(4)
                         } else {
                             emptyList()
@@ -194,6 +196,15 @@ class HomeFragment : Fragment() {
                 }
             }
         }
+    }
+
+    private fun updateDateBadges() {
+        val today = AppClock.today()
+        binding.tvHomeWeekBadge.text = getString(
+            R.string.home_week_badge,
+            AppClock.formatDay(today).substring(0, 5) // "dd/MM"
+        )
+        binding.tvHomeMonthBadge.text = getString(R.string.home_month_badge, today.month, today.year)
     }
 
     override fun onDestroyView() {

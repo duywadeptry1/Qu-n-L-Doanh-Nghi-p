@@ -7,6 +7,7 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.example.R
 import com.example.databinding.ItemOrderCardBinding
+import com.example.model.AppClock
 import com.example.model.CurrencyFormatter
 import com.example.model.Order
 import com.example.model.OrderStatus
@@ -43,7 +44,21 @@ class OrderCardAdapter(
         fun bind(order: Order) {
             val ctx = binding.root.context
             binding.tvOrderCode.text = order.id
-            val dateInfo = if (order.createdAt.isNotBlank()) "${order.createdAt} • ${order.timeAgo}" else order.timeAgo
+            binding.tvOrderChannelBadge.text = order.salesChannel.badgeText
+            if (order.salesChannel == com.example.model.SalesChannel.B2B) {
+                binding.tvOrderChannelBadge.setBackgroundResource(R.drawable.bg_pill_blue)
+                binding.tvOrderChannelBadge.setTextColor(ContextCompat.getColor(ctx, R.color.indigo_primary))
+            } else {
+                binding.tvOrderChannelBadge.setBackgroundResource(R.drawable.bg_pill_gray)
+                binding.tvOrderChannelBadge.setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
+            }
+            if (order.vipTierAtPurchase.isVip) {
+                binding.tvOrderVipBadge.visibility = View.VISIBLE
+                binding.tvOrderVipBadge.text = order.vipTierAtPurchase.badgeText
+            } else {
+                binding.tvOrderVipBadge.visibility = View.GONE
+            }
+            val dateInfo = AppClock.orderDisplayTime(order)
             binding.tvOrderTime.text = "($dateInfo)"
             binding.tvOrderCustomerName.text = order.customerName
             binding.tvOrderCustomerPhone.text = " - ${order.customerPhone}"

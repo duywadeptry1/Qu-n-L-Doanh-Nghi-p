@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/bg_bottom_sheet">
@@ -37,12 +38,75 @@
                 app:tint="@color/text_secondary" />
         </LinearLayout>
 
+        <!-- Sales Channel Selector (B2B vs B2C) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Kênh bán hàng"
+            android:textColor="@color/text_secondary"
+            android:textSize="12.5sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/btn_channel_b2b"
+                android:layout_width="0dp"
+                android:layout_height="42dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_pill_gray"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="🏢 Doanh nghiệp (B2B)"
+                android:textColor="@color/text_secondary"
+                android:textSize="12.5sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/btn_channel_b2c"
+                android:layout_width="0dp"
+                android:layout_height="42dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_pill_solid_blue"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="🛍️ Bán lẻ (B2C)"
+                android:textColor="@color/white"
+                android:textSize="12.5sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Quick pick existing VIP representative -->
+        <TextView
+            android:id="@+id/btn_pick_vip_customer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_card_amber_tint"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="9dp"
+            android:text="⭐ Chọn nhanh khách hàng / đại diện VIP đã mua →"
+            android:textColor="@color/amber_text"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:hint="Tên khách hàng">
+            android:layout_marginTop="10dp"
+            android:hint="Tên khách hàng / Người đại diện">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_new_customer_name"
@@ -56,7 +120,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:hint="Số điện thoại">
+            android:hint="Số điện thoại (tự động nhận diện VIP)">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_new_customer_phone"
@@ -142,12 +206,120 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Live VIP & Order Pricing Preview -->
+        <LinearLayout
+            android:id="@+id/card_vip_preview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_card_blue_tint"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/tv_order_vip_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/primary_blue"
+                android:textSize="12.5sp"
+                android:textStyle="bold"
+                tools:text="👑 VIP Vàng (4 đơn đã mua) • Ưu đãi đang áp dụng" />
+
+            <TextView
+                android:id="@+id/tv_order_vip_benefits"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="11.5sp"
+                tools:text="• Giảm 15% SP Demo: -183.000đ\n• Phí ship: 30.000đ → 20.000đ (Giữ sàn giá vốn ≥ 15.000đ)" />
+
+            <TextView
+                android:id="@+id/tv_order_total_preview"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="@color/text_primary"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:text="Tổng thanh toán: 1.057.000đ • Lãi dự kiến: +222.000đ" />
+        </LinearLayout>
+
+        <!-- Trade Lock Warning Banner when inventory is insufficient -->
+        <LinearLayout
+            android:id="@+id/card_trade_lock_warning"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_card_red_tint"
+            android:orientation="vertical"
+            android:padding="12dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/tv_trade_lock_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔒 Đã khóa giao dịch — Tồn kho không đủ"
+                android:textColor="@color/red_primary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_trade_lock_message"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                tools:text="Sản phẩm chỉ còn 6 cái trong kho (bạn đặt 10, thiếu 4)." />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/btn_use_max_stock"
+                    android:layout_width="0dp"
+                    android:layout_height="34dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_pill_blue"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:paddingHorizontal="10dp"
+                    android:text="Đặt tối đa (6)"
+                    android:textColor="@color/primary_blue"
+                    android:textSize="11.5sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/btn_quick_restock"
+                    android:layout_width="0dp"
+                    android:layout_height="34dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_pill_green"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:paddingHorizontal="10dp"
+                    android:text="🔓 + Nhập kho ngay"
+                    android:textColor="@color/green_primary"
+                    android:textSize="11.5sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_submit_new_order"
             style="@style/Widget.Material3.Button.UnelevatedButton"
             android:layout_width="match_parent"
             android:layout_height="52dp"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="14dp"
             android:text="Xác nhận &amp; Tạo đơn hàng"
             android:textColor="@color/white"
             android:textSize="15sp"

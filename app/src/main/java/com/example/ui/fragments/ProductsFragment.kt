@@ -104,12 +104,17 @@ class ProductsFragment : Fragment() {
 
                     val totalStock = products.sumOf { it.stock }
                     val totalSold = products.sumOf { it.soldCount }
-                    val lowStock = products.count { it.stock <= 10 }
+                    val lockedCount = products.count { it.isTradeLocked }
+                    val lowStock = products.count { it.stock in 1..10 }
 
                     binding.tvProductsCountBadge.text = "${products.size} Sản phẩm"
                     binding.tvTotalStock.text = "$totalStock sp"
                     binding.tvTotalSold.text = "$totalSold sp"
-                    binding.tvLowStockCount.text = "$lowStock mã"
+                    binding.tvLowStockCount.text = if (lockedCount > 0) {
+                        "🔒 $lockedCount khóa • $lowStock ít"
+                    } else {
+                        "$lowStock mã"
+                    }
 
                     val q = query.trim().lowercase()
                     val filtered = products.filter { item ->

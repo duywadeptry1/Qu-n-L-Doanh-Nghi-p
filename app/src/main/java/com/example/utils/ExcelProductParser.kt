@@ -300,6 +300,7 @@ object ExcelProductParser {
 
         var colName = 0
         var colPrice = 1
+        var colImportPrice = -1
         var colStock = 2
         var colCat = 3
         var colSku = 4
@@ -315,6 +316,7 @@ object ExcelProductParser {
             startIdx = 1
             colName = -1
             colPrice = -1
+            colImportPrice = -1
             colStock = -1
             colCat = -1
             colSku = -1
@@ -322,7 +324,8 @@ object ExcelProductParser {
             firstRow.forEachIndexed { idx, h ->
                 when {
                     h.contains("tên") || h.contains("name") || h.contains("sản phẩm") -> colName = idx
-                    h.contains("giá") || h.contains("price") -> colPrice = idx
+                    h.contains("giá nhập") || h.contains("import") || h.contains("giá vốn") -> colImportPrice = idx
+                    h.contains("giá") || h.contains("price") || h.contains("export") -> colPrice = idx
                     h.contains("tồn") || h.contains("kho") || h.contains("stock") || h.contains("sl") || h.contains("số lượng") -> colStock = idx
                     h.contains("danh mục") || h.contains("loại") || h.contains("category") -> colCat = idx
                     h.contains("sku") || h.contains("mã") -> colSku = idx
@@ -340,6 +343,7 @@ object ExcelProductParser {
             val (rowNum, cols) = rows[i]
             val name = cols.getOrNull(colName)?.trim().orEmpty()
             val rawPrice = cols.getOrNull(colPrice)?.trim().orEmpty()
+            val rawImportPrice = if (colImportPrice >= 0) cols.getOrNull(colImportPrice)?.trim().orEmpty() else ""
             val rawStock = if (colStock >= 0) cols.getOrNull(colStock)?.trim().orEmpty() else ""
             val rawCat = if (colCat >= 0) cols.getOrNull(colCat)?.trim().orEmpty() else ""
             val rawSku = if (colSku >= 0) cols.getOrNull(colSku)?.trim().orEmpty() else ""
@@ -357,6 +361,8 @@ object ExcelProductParser {
                 continue
             }
 
+            val importPrice = parsePriceVnd(rawImportPrice)?.takeIf { it >= 0L } ?: ((price * 70L) / 100L)
+
             val stock = if (rawStock.isBlank()) {
                 defaultStock
             } else {
@@ -368,6 +374,7 @@ object ExcelProductParser {
                 BulkProductInput(
                     name = name,
                     price = price,
+                    importPrice = importPrice,
                     stock = stock,
                     category = category,
                     sku = rawSku,

@@ -6,6 +6,7 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.example.R
 import com.example.databinding.ItemRecentOrderBinding
+import com.example.model.AppClock
 import com.example.model.CurrencyFormatter
 import com.example.model.Order
 import com.example.model.OrderStatus
@@ -41,7 +42,7 @@ class RecentOrderAdapter(
         fun bind(order: Order) {
             val ctx = binding.root.context
             binding.tvCustomerName.text = "${order.customerName} (#${order.id})"
-            binding.tvTimeAgo.text = if (order.createdAt.isNotBlank()) "${order.createdAt} • ${order.timeAgo}" else order.timeAgo
+            binding.tvTimeAgo.text = AppClock.orderDisplayTime(order)
             binding.tvCustomerPhone.text = order.customerPhone
             binding.tvCustomerAddress.text = order.address
             binding.tvOrderAmount.text = CurrencyFormatter.formatVnd(order.total)

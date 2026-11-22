@@ -149,11 +149,36 @@ class OrderDetailBottomSheet : BottomSheetDialogFragment() {
 
     private fun bindOrder(order: Order) {
         binding.tvDetailOrderCode.text = "#${order.id}"
+        binding.tvDetailChannelBadge.text = order.salesChannel.badgeText
+        if (order.vipTierAtPurchase.isVip) {
+            binding.tvDetailVipBadge.visibility = View.VISIBLE
+            binding.tvDetailVipBadge.text = order.vipTierAtPurchase.badgeText
+        } else {
+            binding.tvDetailVipBadge.visibility = View.GONE
+        }
         binding.tvDetailCustomerName.text = order.customerName
         binding.tvDetailCustomerPhone.text = order.customerPhone
         binding.tvDetailCustomerAddress.text = order.address
         binding.tvDetailSubtotal.text = CurrencyFormatter.formatVnd(order.subtotal)
+
+        if (order.vipProductDiscount > 0L) {
+            binding.rowDetailVipDiscount.visibility = View.VISIBLE
+            binding.tvDetailVipDiscount.text = "-${CurrencyFormatter.formatVnd(order.vipProductDiscount)}"
+        } else {
+            binding.rowDetailVipDiscount.visibility = View.GONE
+        }
+
+        binding.tvDetailShippingLabel.text = if (order.shippingDiscount > 0L) {
+            "Phí vận chuyển (Giảm VIP -${CurrencyFormatter.formatVnd(order.shippingDiscount)}, ≥ giá vốn)"
+        } else {
+            getString(R.string.shipping_fee_label)
+        }
         binding.tvDetailShipping.text = CurrencyFormatter.formatVnd(order.shippingFee)
+
+        val orderProfit = viewModel.resolveOrderProfit(order)
+        val profitPrefix = if (orderProfit >= 0L) "+" else ""
+        binding.tvDetailProfit.text = "$profitPrefix${CurrencyFormatter.formatVnd(orderProfit)}"
+
         binding.tvDetailTotal.text = CurrencyFormatter.formatVnd(order.total)
         binding.tvDetailPaymentMethod.text = order.paymentMethodLabel
 

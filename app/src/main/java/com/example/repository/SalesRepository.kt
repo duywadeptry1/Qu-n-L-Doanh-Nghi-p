@@ -13,6 +13,7 @@ import com.example.api.CreateOrderRequest
 import com.example.api.CreateProductRequest
 import com.example.api.RestockRequest
 import com.example.api.RetrofitClient
+import com.example.model.AppClock
 import com.example.model.CalendarDaySummary
 import com.example.model.NotificationItem
 import com.example.model.Order
@@ -22,6 +23,8 @@ import com.example.model.OrderStatus
 import com.example.model.PaymentTransaction
 import com.example.model.PaymentType
 import com.example.model.Product
+import com.example.model.SalesChannel
+import com.example.model.VipTier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -96,8 +99,9 @@ class SalesRepository {
         address: String,
         product: Product,
         quantity: Int,
-        paymentType: PaymentType
-    ): Order? = withContext(Dispatchers.IO) {
+        paymentType: PaymentType,
+        salesChannel: SalesChannel = SalesChannel.B2C
+    ): com.example.model.BackendCreateOrderResult = withContext(Dispatchers.IO) {
         try {
             val req = CreateOrderRequest(
                 customerName = customerName,
@@ -105,13 +109,25 @@ class SalesRepository {
                 address = address,
                 productId = product.id,
                 quantity = quantity,
-                paymentType = paymentType.name
+                paymentType = paymentType.name,
+                salesChannel = salesChannel.name
             )
             val created = api.createOrder(req)
-            created.toDomain()
+            com.example.model.BackendCreateOrderResult.Success(created.toDomain())
+        } catch (e: retrofit2.HttpException) {
+            if (e.code() == 409) {
+                val rawBody = try { e.response()?.errorBody()?.string().orEmpty() } catch (_: Exception) { "" }
+                val parsedMsg = Regex("\"error\"\\s*:\\s*\"([^\"]+)\"")
+                    .find(rawBody)?.groupValues?.getOrNull(1)
+                    ?: "🔒 Đã khóa giao dịch do tồn kho không đủ trên máy chủ."
+                com.example.model.BackendCreateOrderResult.TradeLocked(parsedMsg)
+            } else {
+                handleException(e)
+                com.example.model.BackendCreateOrderResult.NetworkError
+            }
         } catch (e: Exception) {
             handleException(e)
-            null
+            com.example.model.BackendCreateOrderResult.NetworkError
         }
     }
 
@@ -150,13 +166,24 @@ class SalesRepository {
     suspend fun createProduct(
         name: String,
         category: String,
+        importPrice: Long,
         price: Long,
         stock: Int,
+        isDemoProduct: Boolean = false,
         description: String = "",
         imageUrl: String = ""
     ): Product? = withContext(Dispatchers.IO) {
         try {
-            val req = CreateProductRequest(name, category, price, stock, description, imageUrl)
+            val req = CreateProductRequest(
+                name = name,
+                category = category,
+                importPrice = importPrice,
+                price = price,
+                stock = stock,
+                isDemoProduct = isDemoProduct,
+                description = description,
+                imageUrl = imageUrl
+            )
             val created = api.createProduct(req)
             created.toDomain()
         } catch (e: Exception) {
@@ -178,8 +205,10 @@ class SalesRepository {
                 CreateProductRequest(
                     name = item.name,
                     category = item.category,
+                    importPrice = item.importPrice,
                     price = item.price,
                     stock = item.stock,
+                    isDemoProduct = item.isDemoProduct,
                     description = item.description,
                     imageUrl = item.imageUrl,
                     sku = item.sku
@@ -210,13 +239,24 @@ class SalesRepository {
         productId: String,
         name: String,
         category: String,
+        importPrice: Long,
         price: Long,
         stock: Int,
+        isDemoProduct: Boolean,
         description: String,
         imageUrl: String
     ): Product? = withContext(Dispatchers.IO) {
         try {
-            val req = CreateProductRequest(name, category, price, stock, description, imageUrl)
+            val req = CreateProductRequest(
+                name = name,
+                category = category,
+                importPrice = importPrice,
+                price = price,
+                stock = stock,
+                isDemoProduct = isDemoProduct,
+                description = description,
+                imageUrl = imageUrl
+            )
             val updated = api.updateProduct(productId, req)
             updated.toDomain()
         } catch (e: Exception) {
@@ -281,23 +321,47 @@ class SalesRepository {
     private fun ApiOrder.toDomain(): Order {
         val domainStatus = try { OrderStatus.valueOf(status) } catch (_: Exception) { OrderStatus.PLACED }
         val domainPaymentType = try { PaymentType.valueOf(paymentType) } catch (_: Exception) { PaymentType.COD }
+        val domainChannel = try {
+            salesChannel?.let { SalesChannel.valueOf(it) } ?: SalesChannel.B2C
+        } catch (_: Exception) {
+            SalesChannel.B2C
+        }
+        val domainVip = try {
+            vipTierAtPurchase?.let { VipTier.valueOf(it) } ?: VipTier.STANDARD
+        } catch (_: Exception) {
+            VipTier.STANDARD
+        }
         return Order(
             id = id,
-            timeAgo = timeAgo ?: "17/11/2026",
+            timeAgo = timeAgo ?: createdAt?.let { AppClock.parseIso(it) }?.let { AppClock.formatOrderTime(it) } ?: "",
             customerName = customerName,
             customerPhone = customerPhone,
             address = address,
             status = domainStatus,
-            items = items.map { OrderItem(it.productName, it.quantity, it.unitPrice) },
+            items = items.map {
+                OrderItem(
+                    productName = it.productName,
+                    quantity = it.quantity,
+                    unitPrice = it.unitPrice,
+                    importPrice = it.importPrice ?: 0L,
+                    isDemoProduct = it.isDemoProduct ?: false
+                )
+            },
             shippingFee = shippingFee,
             paymentMethodLabel = paymentMethodLabel,
             paymentType = domainPaymentType,
-            createdAt = createdAt ?: ""
+            createdAt = createdAt ?: "",
+            salesChannel = domainChannel,
+            vipTierAtPurchase = domainVip,
+            vipProductDiscount = vipProductDiscount ?: 0L,
+            shippingDiscount = shippingDiscount ?: 0L,
+            shippingCost = shippingCost ?: VipTier.SHIPPING_BASE_COST
         )
     }
 
     private fun ApiProduct.toDomain(): Product {
         val resId = if (imageResName == "img_product_tshirt") R.drawable.img_product_tshirt else R.drawable.img_product_electronics
+        val resolvedImport = importPrice?.takeIf { it > 0L } ?: ((price * 70L) / 100L)
         return Product(
             id = id,
             sku = sku,
@@ -308,7 +372,9 @@ class SalesRepository {
             soldCount = soldCount,
             imageRes = resId,
             description = description ?: "",
-            imageUrl = imageUrl ?: ""
+            imageUrl = imageUrl ?: "",
+            importPrice = resolvedImport,
+            isDemoProduct = isDemoProduct ?: false
         )
     }
 
@@ -329,7 +395,7 @@ class SalesRepository {
             id = id,
             title = title,
             message = message,
-            timeAgo = timeAgo ?: "17/11/2026",
+            timeAgo = timeAgo ?: AppClock.formatDate(),
             isAlert = isAlert ?: false
         )
     }
@@ -342,7 +408,7 @@ class SalesRepository {
             totalOrders = totalOrders,
             completedOrders = deliveredOrders,
             deliveringOrders = cancelledOrders,
-            isFuture = isFuture ?: (dayNumber > 17)
+            isFuture = isFuture ?: (dayNumber > AppClock.todayDayOfMonth())
         )
     }
 }

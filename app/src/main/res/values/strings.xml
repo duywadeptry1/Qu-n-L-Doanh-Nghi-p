@@ -13,7 +13,7 @@
     <string name="company_short_name">Cty TNHH Viễn Đông</string>
     <string name="company_tap_detail">Bấm xem chi tiết công ty</string>
     <string name="home_weekly_overview">TỔNG QUAN ĐƠN HÀNG THỰC TẾ</string>
-    <string name="home_week_badge">Hôm nay 17/11</string>
+    <string name="home_week_badge">Hôm nay %1$s</string>
     <string name="kpi_placed_title">1. Khách đặt &amp; CB</string>
     <string name="kpi_delivering_title">2. Đã giao ĐVVC</string>
     <string name="kpi_delivered_title">3. Đã đến tay KH</string>
@@ -34,7 +34,7 @@
 
     <!-- Calendar Section -->
     <string name="home_calendar_title">LỊCH ĐƠN HÀNG TRONG THÁNG</string>
-    <string name="home_month_badge">Tháng 11, 2026</string>
+    <string name="home_month_badge">Tháng %1$d, %2$d</string>
     <string name="home_recent_orders_title">ĐƠN HÀNG TRONG NGÀY / GẦN ĐÂY</string>
     <string name="home_all_orders_link">Tất cả đơn</string>
 

@@ -6,6 +6,7 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.example.R
 import com.example.databinding.ItemCalendarDayBinding
+import com.example.model.AppClock
 import com.example.model.CalendarDaySummary
 
 class CalendarDayAdapter(
@@ -13,7 +14,7 @@ class CalendarDayAdapter(
 ) : RecyclerView.Adapter<CalendarDayAdapter.DayViewHolder>() {
 
     private var days: List<CalendarDaySummary> = emptyList()
-    private var selectedDayNumber: Int = 17
+    private var selectedDayNumber: Int = AppClock.todayDayOfMonth()
 
     fun submitList(newDays: List<CalendarDaySummary>, selectedDay: Int) {
         days = newDays
@@ -40,7 +41,8 @@ class CalendarDayAdapter(
 
         fun bind(item: CalendarDaySummary, isSelected: Boolean) {
             val ctx = binding.root.context
-            binding.tvMonthLabel.text = if (item.dayNumber == 17) "Hôm nay" else item.monthLabel
+            val isToday = item.dayNumber == AppClock.todayDayOfMonth()
+            binding.tvMonthLabel.text = if (isToday) "Hôm nay" else item.monthLabel
             binding.tvDayNumber.text = String.format("%02d", item.dayNumber)
 
             binding.tvDayBadge.text = when {
@@ -61,7 +63,7 @@ class CalendarDayAdapter(
                 binding.tvMonthLabel.setTextColor(
                     ContextCompat.getColor(
                         ctx,
-                        if (item.dayNumber == 17) R.color.primary_blue else R.color.text_hint
+                        if (isToday) R.color.primary_blue else R.color.text_hint
                     )
                 )
                 binding.tvDayNumber.setTextColor(

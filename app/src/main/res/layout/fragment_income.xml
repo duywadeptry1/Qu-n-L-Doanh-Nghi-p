@@ -40,14 +40,14 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="@string/income_subtitle"
+                    android:text="Báo cáo Doanh thu, Lợi nhuận, B2B/B2C &amp; Khách VIP"
                     android:textColor="@color/text_muted"
                     android:textSize="13sp" />
             </LinearLayout>
 
         </LinearLayout>
 
-        <!-- Hero Gradient Revenue Card -->
+        <!-- Hero Gradient Income Statement Card (Revenue & Profit) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -70,7 +70,7 @@
                     android:letterSpacing="0.04"
                     android:text="@string/income_hero_label"
                     android:textColor="#CBD5E1"
-                    android:textSize="12sp"
+                    android:textSize="11.5sp"
                     android:textStyle="bold" />
 
                 <LinearLayout
@@ -102,19 +102,106 @@
             </LinearLayout>
 
             <TextView
-                android:id="@+id/tv_income_total"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
+                android:text="Tổng Doanh thu (Revenue)"
+                android:textColor="#94A3B8"
+                android:textSize="11.5sp" />
+
+            <TextView
+                android:id="@+id/tv_income_total"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
                 android:textColor="@color/white"
-                android:textSize="28sp"
+                android:textSize="26sp"
                 android:textStyle="bold"
-                tools:text="34.850.000 VNĐ" />
+                tools:text="14.950.000 VNĐ" />
+
+            <!-- Profit & Cost Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1.15"
+                    android:background="@drawable/bg_hero_subcard"
+                    android:orientation="vertical"
+                    android:padding="11dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Lợi nhuận (Profit)"
+                            android:textColor="#CBD5E1"
+                            android:textSize="11sp" />
+
+                        <TextView
+                            android:id="@+id/tv_profit_margin"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/green_bright"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            tools:text="31.5%" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_income_profit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:textColor="@color/green_bright"
+                        android:textSize="15.5sp"
+                        android:textStyle="bold"
+                        tools:text="4.710.000 VNĐ" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="0.85"
+                    android:background="@drawable/bg_hero_subcard"
+                    android:orientation="vertical"
+                    android:padding="11dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Giá vốn &amp; ship"
+                        android:textColor="#CBD5E1"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tv_income_cost"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:textColor="#FDE68A"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        tools:text="10.240.000đ" />
+                </LinearLayout>
+            </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:layout_marginVertical="14dp"
+                android:layout_marginVertical="12dp"
                 android:background="#26FFFFFF" />
 
             <LinearLayout
@@ -129,24 +216,24 @@
                     android:layout_weight="1"
                     android:background="@drawable/bg_hero_subcard"
                     android:orientation="vertical"
-                    android:padding="12dp">
+                    android:padding="11dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/income_cod_label"
                         android:textColor="#CBD5E1"
-                        android:textSize="11.5sp" />
+                        android:textSize="11sp" />
 
                     <TextView
                         android:id="@+id/tv_income_cod"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textColor="@color/green_bright"
-                        android:textSize="15.5sp"
+                        android:layout_marginTop="3dp"
+                        android:textColor="@color/white"
+                        android:textSize="14.5sp"
                         android:textStyle="bold"
-                        tools:text="21.400.000đ" />
+                        tools:text="680.000đ" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -156,29 +243,29 @@
                     android:layout_weight="1"
                     android:background="@drawable/bg_hero_subcard"
                     android:orientation="vertical"
-                    android:padding="12dp">
+                    android:padding="11dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/income_bank_label"
                         android:textColor="#CBD5E1"
-                        android:textSize="11.5sp" />
+                        android:textSize="11sp" />
 
                     <TextView
                         android:id="@+id/tv_income_bank"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="3dp"
                         android:textColor="@color/blue_light_accent"
-                        android:textSize="15.5sp"
+                        android:textSize="14.5sp"
                         android:textStyle="bold"
-                        tools:text="13.450.000đ" />
+                        tools:text="14.270.000đ" />
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Chart Card: BIỂU ĐỒ THU NHẬP -->
+        <!-- Chart Card: BIỂU ĐỒ DOANH THU / LỢI NHUẬN -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -201,13 +288,14 @@
                     app:tint="@color/primary_blue" />
 
                 <TextView
+                    android:id="@+id/tv_chart_title"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:layout_weight="1"
                     android:text="@string/income_chart_title"
                     android:textColor="@color/text_primary"
-                    android:textSize="13.5sp"
+                    android:textSize="13sp"
                     android:textStyle="bold" />
 
                 <LinearLayout
@@ -220,50 +308,87 @@
                     <TextView
                         android:id="@+id/tab_period_week"
                         android:layout_width="wrap_content"
-                        android:layout_height="30dp"
+                        android:layout_height="28dp"
                         android:background="@drawable/bg_pill_white"
                         android:clickable="true"
                         android:focusable="true"
                         android:gravity="center"
-                        android:paddingHorizontal="12dp"
+                        android:paddingHorizontal="10dp"
                         android:text="@string/period_week"
                         android:textColor="@color/primary_blue"
-                        android:textSize="12sp"
+                        android:textSize="11.5sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tab_period_month"
                         android:layout_width="wrap_content"
-                        android:layout_height="30dp"
+                        android:layout_height="28dp"
                         android:clickable="true"
                         android:focusable="true"
                         android:gravity="center"
-                        android:paddingHorizontal="12dp"
+                        android:paddingHorizontal="10dp"
                         android:text="@string/period_month"
                         android:textColor="@color/text_muted"
-                        android:textSize="12sp"
+                        android:textSize="11.5sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tab_period_year"
                         android:layout_width="wrap_content"
-                        android:layout_height="30dp"
+                        android:layout_height="28dp"
                         android:clickable="true"
                         android:focusable="true"
                         android:gravity="center"
-                        android:paddingHorizontal="12dp"
+                        android:paddingHorizontal="10dp"
                         android:text="@string/period_year"
                         android:textColor="@color/text_muted"
-                        android:textSize="12sp"
+                        android:textSize="11.5sp"
                         android:textStyle="bold" />
                 </LinearLayout>
+            </LinearLayout>
+
+            <!-- Metric Switcher: Revenue vs Profit -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_segmented_container"
+                android:orientation="horizontal"
+                android:padding="3dp">
+
+                <TextView
+                    android:id="@+id/tab_metric_revenue"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_pill_white"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="📊 Doanh thu (Revenue)"
+                    android:textColor="@color/primary_blue"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tab_metric_profit"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_weight="1"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="💰 Lợi nhuận (Profit)"
+                    android:textColor="@color/text_muted"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
             </LinearLayout>
 
             <com.example.ui.views.IncomeBarChartView
                 android:id="@+id/income_bar_chart"
                 android:layout_width="match_parent"
                 android:layout_height="210dp"
-                android:layout_marginTop="12dp" />
+                android:layout_marginTop="10dp" />
 
             <View
                 android:layout_width="match_parent"
@@ -280,9 +405,9 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Trung bình/Kỳ: "
+                    android:text="TB/Kỳ: "
                     android:textColor="@color/text_muted"
-                    android:textSize="12.5sp" />
+                    android:textSize="12sp" />
 
                 <TextView
                     android:id="@+id/tv_chart_avg"
@@ -290,7 +415,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:textColor="@color/text_primary"
-                    android:textSize="12.5sp"
+                    android:textSize="12sp"
                     android:textStyle="bold"
                     tools:text="4.970.000đ" />
 
@@ -299,10 +424,273 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textColor="@color/primary_blue"
-                    android:textSize="12.5sp"
+                    android:textSize="12sp"
                     android:textStyle="bold"
-                    tools:text="Đỉnh điểm: 8.5tr (Thứ 6)" />
+                    tools:text="Đỉnh điểm: 8.5tr" />
             </LinearLayout>
+        </LinearLayout>
+
+        <!-- B2B vs B2C Sales Statistics Card (with Symbols) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_card_white"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_pie_chart"
+                    app:tint="@color/indigo_primary" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="THỐNG KÊ BÁN HÀNG B2B &amp; B2C"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_channel_ratio_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_pill_blue"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="3dp"
+                    android:textColor="@color/indigo_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    tools:text="🏢 78% • 🛍️ 22%" />
+            </LinearLayout>
+
+            <!-- Proportional B2B / B2C Ratio Bar -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="10dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_card_subtle"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/bar_b2b_share"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="50"
+                    android:background="@color/indigo_primary" />
+
+                <View
+                    android:id="@+id/bar_b2c_share"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="50"
+                    android:background="@color/green_primary" />
+            </LinearLayout>
+
+            <!-- Side-by-side B2B & B2C Cards -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <!-- B2B Card -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_card_blue_tint"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="🏢 B2B (Sỉ)"
+                            android:textColor="@color/indigo_primary"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_b2b_share"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/indigo_primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            tools:text="78%" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_b2b_revenue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14.5sp"
+                        android:textStyle="bold"
+                        tools:text="13.552.000đ" />
+
+                    <TextView
+                        android:id="@+id/tv_b2b_profit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:textColor="@color/green_primary"
+                        android:textSize="11.5sp"
+                        android:textStyle="bold"
+                        tools:text="Lãi: +4.157.000đ" />
+
+                    <TextView
+                        android:id="@+id/tv_b2b_orders"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:textColor="@color/text_muted"
+                        android:textSize="11.5sp"
+                        tools:text="4 đơn doanh nghiệp" />
+                </LinearLayout>
+
+                <!-- B2C Card -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_card_green_tint"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="🛍️ B2C (Lẻ)"
+                            android:textColor="@color/green_primary"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_b2c_share"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/green_primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            tools:text="22%" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_b2c_revenue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14.5sp"
+                        android:textStyle="bold"
+                        tools:text="1.530.000đ" />
+
+                    <TextView
+                        android:id="@+id/tv_b2c_profit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:textColor="@color/green_primary"
+                        android:textSize="11.5sp"
+                        android:textStyle="bold"
+                        tools:text="Lãi: +540.000đ" />
+
+                    <TextView
+                        android:id="@+id/tv_b2c_orders"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:textColor="@color/text_muted"
+                        android:textSize="11.5sp"
+                        tools:text="2 đơn bán lẻ" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- VIP Representatives & Benefits Card -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_card_white"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="👑 ĐẠI DIỆN &amp; KHÁCH HÀNG VIP"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_vip_savings_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_pill_amber"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="3dp"
+                    android:textColor="@color/amber_text"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    tools:text="Ưu đãi: 193.000đ" />
+            </LinearLayout>
+
+            <!-- VIP Tier Rules Banner -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_card_amber_tint"
+                android:padding="10dp"
+                android:text="⭐ VIP Bạc (≥2 đơn): -10% SP Demo, -5K ship\n👑 VIP Vàng (≥4 đơn): -15% SP Demo, -10K ship\n💎 VIP Kim Cương (≥6 đơn): -20% SP Demo, -15K ship (giữ sàn giá vốn ship ≥ 15.000đ, không giảm lỗ)"
+                android:textColor="@color/text_secondary"
+                android:textSize="11.5sp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_vip_customers"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:nestedScrollingEnabled="false" />
         </LinearLayout>
 
         <!-- Transaction Log Header -->

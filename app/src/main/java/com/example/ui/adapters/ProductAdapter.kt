@@ -50,9 +50,20 @@ class ProductAdapter(
             )
 
             binding.tvProductSku.text = "SKU: ${product.sku}"
+            binding.tvDemoBadge.visibility = if (product.isDemoProduct) View.VISIBLE else View.GONE
             binding.tvProductName.text = product.name
-            binding.tvProductPrice.text = CurrencyFormatter.formatVnd(product.price)
+            binding.tvProductPrice.text = "Xuất: ${CurrencyFormatter.formatVnd(product.exportPrice)}"
             binding.tvProductSold.text = "Đã bán: ${product.soldCount}"
+            binding.tvProductImportPrice.text = "Nhập: ${CurrencyFormatter.formatVnd(product.importPrice)}"
+            val unitProfit = product.unitProfit
+            val marginInt = product.profitMarginPercent.toInt()
+            if (unitProfit >= 0L) {
+                binding.tvProductUnitProfit.text = "• Lãi: +${CurrencyFormatter.formatVnd(unitProfit)} ($marginInt%)"
+                binding.tvProductUnitProfit.setTextColor(ContextCompat.getColor(ctx, R.color.green_primary))
+            } else {
+                binding.tvProductUnitProfit.text = "• Lỗ: ${CurrencyFormatter.formatVnd(unitProfit)}"
+                binding.tvProductUnitProfit.setTextColor(ContextCompat.getColor(ctx, R.color.red_primary))
+            }
             binding.tvProductCategory.text = "Danh mục: ${product.category}"
             binding.tvProductStockCount.text = "Tồn kho: ${product.stock}"
 
@@ -64,24 +75,29 @@ class ProductAdapter(
             }
 
             when {
-                product.stock == 0 -> {
-                    binding.tvStockStatusBadge.text = "Hết hàng"
+                product.isTradeLocked -> {
+                    binding.tvStockStatusBadge.text = "🔒 Khóa GD"
                     binding.tvStockStatusBadge.setBackgroundResource(R.drawable.bg_pill_red)
                     binding.tvStockStatusBadge.setTextColor(ContextCompat.getColor(ctx, R.color.red_primary))
+                    binding.tvProductTradeLockedBanner.visibility = View.VISIBLE
+                    binding.btnRestockProduct.text = "🔓 + Nhập kho"
                 }
                 product.stock <= 10 -> {
                     binding.tvStockStatusBadge.text = "Sắp hết (${product.stock})"
                     binding.tvStockStatusBadge.setBackgroundResource(R.drawable.bg_pill_amber)
                     binding.tvStockStatusBadge.setTextColor(ContextCompat.getColor(ctx, R.color.amber_text))
+                    binding.tvProductTradeLockedBanner.visibility = View.GONE
+                    binding.btnRestockProduct.text = "+ Nhập kho"
                 }
                 else -> {
                     binding.tvStockStatusBadge.text = "Còn hàng"
                     binding.tvStockStatusBadge.setBackgroundResource(R.drawable.bg_pill_green)
                     binding.tvStockStatusBadge.setTextColor(ContextCompat.getColor(ctx, R.color.green_primary))
+                    binding.tvProductTradeLockedBanner.visibility = View.GONE
+                    binding.btnRestockProduct.text = "+ Nhập kho"
                 }
             }
 
-            binding.btnRestockProduct.text = "+ Nhập kho"
             binding.btnRestockProduct.setOnClickListener { onRestockClick(product) }
             binding.btnEditProduct.setOnClickListener { onEditClick(product) }
             binding.root.setOnClickListener { onEditClick(product) }

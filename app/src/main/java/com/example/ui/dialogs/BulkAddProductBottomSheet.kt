@@ -357,8 +357,9 @@ class BulkAddProductBottomSheet : BottomSheetDialogFragment() {
                 binding.tvPreviewIndex.text = index.toString()
                 binding.tvPreviewName.text = item.name
                 val skuPart = if (item.sku.isNotBlank()) " • SKU: ${item.sku}" else ""
-                binding.tvPreviewMeta.text = "${item.category} • Tồn: ${item.stock}$skuPart"
-                binding.tvPreviewPrice.text = CurrencyFormatter.formatVnd(item.price)
+                val importPart = if (item.importPrice > 0L) " • Nhập: ${CurrencyFormatter.formatVnd(item.importPrice)}" else ""
+                binding.tvPreviewMeta.text = "${item.category} • Tồn: ${item.stock}$importPart$skuPart"
+                binding.tvPreviewPrice.text = "Xuất: ${CurrencyFormatter.formatVnd(item.price)}"
             }
         }
     }

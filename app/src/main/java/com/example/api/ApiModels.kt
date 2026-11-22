@@ -13,7 +13,9 @@ data class ApiHealth(
 data class ApiOrderItem(
     @Json(name = "productName") val productName: String,
     @Json(name = "quantity") val quantity: Int,
-    @Json(name = "unitPrice") val unitPrice: Long
+    @Json(name = "unitPrice") val unitPrice: Long,
+    @Json(name = "importPrice") val importPrice: Long? = null,
+    @Json(name = "isDemoProduct") val isDemoProduct: Boolean? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -28,7 +30,12 @@ data class ApiOrder(
     @Json(name = "shippingFee") val shippingFee: Long,
     @Json(name = "paymentMethodLabel") val paymentMethodLabel: String,
     @Json(name = "paymentType") val paymentType: String,
-    @Json(name = "createdAt") val createdAt: String? = null
+    @Json(name = "createdAt") val createdAt: String? = null,
+    @Json(name = "salesChannel") val salesChannel: String? = null,
+    @Json(name = "vipTierAtPurchase") val vipTierAtPurchase: String? = null,
+    @Json(name = "vipProductDiscount") val vipProductDiscount: Long? = null,
+    @Json(name = "shippingDiscount") val shippingDiscount: Long? = null,
+    @Json(name = "shippingCost") val shippingCost: Long? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -38,7 +45,8 @@ data class CreateOrderRequest(
     @Json(name = "address") val address: String,
     @Json(name = "productId") val productId: String,
     @Json(name = "quantity") val quantity: Int,
-    @Json(name = "paymentType") val paymentType: String
+    @Json(name = "paymentType") val paymentType: String,
+    @Json(name = "salesChannel") val salesChannel: String = "B2C"
 )
 
 @JsonClass(generateAdapter = true)
@@ -47,9 +55,11 @@ data class ApiProduct(
     @Json(name = "sku") val sku: String,
     @Json(name = "name") val name: String,
     @Json(name = "category") val category: String,
+    @Json(name = "importPrice") val importPrice: Long? = null,
     @Json(name = "price") val price: Long,
     @Json(name = "stock") val stock: Int,
     @Json(name = "soldCount") val soldCount: Int,
+    @Json(name = "isDemoProduct") val isDemoProduct: Boolean? = null,
     @Json(name = "imageResName") val imageResName: String?,
     @Json(name = "description") val description: String? = null,
     @Json(name = "imageUrl") val imageUrl: String? = null
@@ -59,8 +69,10 @@ data class ApiProduct(
 data class CreateProductRequest(
     @Json(name = "name") val name: String,
     @Json(name = "category") val category: String,
+    @Json(name = "importPrice") val importPrice: Long = 0L,
     @Json(name = "price") val price: Long,
     @Json(name = "stock") val stock: Int,
+    @Json(name = "isDemoProduct") val isDemoProduct: Boolean = false,
     @Json(name = "description") val description: String = "",
     @Json(name = "imageUrl") val imageUrl: String = "",
     @Json(name = "imageResName") val imageResName: String = "",

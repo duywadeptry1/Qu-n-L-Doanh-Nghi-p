@@ -25,6 +25,15 @@ class IncomeBarChartView @JvmOverloads constructor(
     private var selectedIndex: Int = 0
     private var animProgress: Float = 1f
     private var animator: ValueAnimator? = null
+    private var isProfitTheme: Boolean = false
+
+    private var activeBarColor: Int = Color.parseColor("#2563EB")
+    private var activeSelectedBarColor: Int = Color.parseColor("#1D4ED8")
+    private var outsidePillTextColor: Int = Color.parseColor("#1D4ED8")
+    private var selectedXLabelColor: Int = Color.parseColor("#2563EB")
+
+    private val defaultXLabelColor = Color.parseColor("#64748B")
+    private val pillInsideTextColor = Color.WHITE
 
     private val density = resources.displayMetrics.density
     private val sp = resources.displayMetrics.scaledDensity
@@ -41,35 +50,46 @@ class IncomeBarChartView @JvmOverloads constructor(
     }
 
     private val xLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#64748B")
+        color = defaultXLabelColor
         textSize = 11.5f * sp
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
 
     private val barPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#2563EB")
+        color = activeBarColor
         style = Paint.Style.FILL
     }
 
     private val selectedBarPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#1D4ED8")
+        color = activeSelectedBarColor
         style = Paint.Style.FILL
     }
 
     private val valueTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
+        color = pillInsideTextColor
         textSize = 9.5f * sp
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
 
     private val barRects = mutableListOf<RectF>()
+    private val currentBarRect = RectF()
+    private val barPath = Path()
 
-    fun setData(points: List<IncomeBarPoint>, maxVal: Float, initialSelection: Int = 0) {
+    var onBarSelected: ((index: Int, item: IncomeBarPoint) -> Unit)? = null
+
+    fun setData(
+        points: List<IncomeBarPoint>,
+        maxVal: Float,
+        initialSelection: Int = 0,
+        profitMode: Boolean = false
+    ) {
         bars = points
         maxAxisValue = maxVal.coerceAtLeast(1f)
         selectedIndex = initialSelection.coerceIn(0, (points.size - 1).coerceAtLeast(0))
+        updateThemeColors(profitMode)
+
         animator?.cancel()
         animator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 420L
@@ -80,27 +100,49 @@ class IncomeBarChartView @JvmOverloads constructor(
             }
             start()
         }
+
+        if (points.isNotEmpty()) {
+            onBarSelected?.invoke(selectedIndex, points[selectedIndex])
+        }
+    }
+
+    private fun updateThemeColors(profitMode: Boolean) {
+        isProfitTheme = profitMode
+        if (profitMode) {
+            activeBarColor = Color.parseColor("#10B981")
+            activeSelectedBarColor = Color.parseColor("#059669")
+            outsidePillTextColor = Color.parseColor("#059669")
+            selectedXLabelColor = Color.parseColor("#059669")
+        } else {
+            activeBarColor = Color.parseColor("#2563EB")
+            activeSelectedBarColor = Color.parseColor("#1D4ED8")
+            outsidePillTextColor = Color.parseColor("#1D4ED8")
+            selectedXLabelColor = Color.parseColor("#2563EB")
+        }
+        barPaint.color = activeBarColor
+        selectedBarPaint.color = activeSelectedBarColor
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         if (bars.isEmpty() || width == 0 || height == 0) return
 
-        val leftPad = 30f * density
-        val rightPad = 10f * density
-        val topPad = 14f * density
-        val bottomPad = 28f * density
+        val leftPad = paddingLeft + 30f * density
+        val rightPad = paddingRight + 10f * density
+        val topPad = paddingTop + 14f * density
+        val bottomPad = paddingBottom + 28f * density
 
         val chartW = (width - leftPad - rightPad).coerceAtLeast(1f)
         val chartH = (height - topPad - bottomPad).coerceAtLeast(1f)
+        val chartRight = width - rightPad
         val chartBottom = topPad + chartH
 
-        // Draw horizontal gridlines (5 or 10 steps)
+        // Vẽ lưới ngang và nhãn trục tung
         val steps = if (maxAxisValue <= 10f) 9 else 5
         for (i in 0..steps) {
             val ratio = i.toFloat() / steps
             val y = chartBottom - ratio * chartH
-            canvas.drawLine(leftPad, y, width - rightPad, y, gridPaint)
+            canvas.drawLine(leftPad, y, chartRight, y, gridPaint)
 
             val tickVal = (maxAxisValue * ratio).toInt()
             canvas.drawText(
@@ -115,6 +157,14 @@ class IncomeBarChartView @JvmOverloads constructor(
         val slotW = chartW / bars.size
         val barW = (slotW * 0.62f).coerceAtMost(38f * density)
         val cornerRadius = 8f * density
+        val radii = floatArrayOf(
+            cornerRadius, cornerRadius,
+            cornerRadius, cornerRadius,
+            0f, 0f,
+            0f, 0f
+        )
+
+        val minInsideBarHeight = 26f * density
 
         bars.forEachIndexed { index, point ->
             val centerX = leftPad + slotW * index + slotW / 2f
@@ -125,7 +175,8 @@ class IncomeBarChartView @JvmOverloads constructor(
             }
             val targetH = ratio * chartH * animProgress
             val topY = chartBottom - targetH
-            val rect = RectF(
+
+            currentBarRect.set(
                 centerX - barW / 2f,
                 topY,
                 centerX + barW / 2f,
@@ -133,41 +184,20 @@ class IncomeBarChartView @JvmOverloads constructor(
             )
             barRects.add(RectF(centerX - slotW / 2f, topPad, centerX + slotW / 2f, chartBottom))
 
-            val path = Path().apply {
-                addRoundRect(
-                    rect,
-                    floatArrayOf(
-                        cornerRadius, cornerRadius,
-                        cornerRadius, cornerRadius,
-                        0f, 0f,
-                        0f, 0f
-                    ),
-                    Path.Direction.CW
-                )
-            }
+            barPath.reset()
+            barPath.addRoundRect(currentBarRect, radii, Path.Direction.CW)
+
             val isSelected = index == selectedIndex
-            canvas.drawPath(path, if (isSelected) selectedBarPaint else barPaint)
+            canvas.drawPath(barPath, if (isSelected) selectedBarPaint else barPaint)
 
             if (isSelected && animProgress > 0.6f) {
-                val labelY = if (targetH > 26f * density) {
-                    topY + 15f * density
-                } else {
-                    (topY - 6f * density).coerceAtLeast(topPad + 10f * density)
-                }
-                if (targetH <= 26f * density) {
-                    valueTextPaint.color = Color.parseColor("#1D4ED8")
-                } else {
-                    valueTextPaint.color = Color.WHITE
-                }
+                val labelY = (topY - 6f * density).coerceAtLeast(topPad + 10f * density)
+                valueTextPaint.color = outsidePillTextColor
                 canvas.drawText(point.displayPill, centerX, labelY, valueTextPaint)
             }
 
-            xLabelPaint.color = if (isSelected) {
-                Color.parseColor("#2563EB")
-            } else {
-                Color.parseColor("#64748B")
-            }
-            canvas.drawText(point.label, centerX, height - 6f * density, xLabelPaint)
+            xLabelPaint.color = if (isSelected) selectedXLabelColor else defaultXLabelColor
+            canvas.drawText(point.label, centerX, height - paddingBottom - 6f * density, xLabelPaint)
         }
     }
 
@@ -179,6 +209,7 @@ class IncomeBarChartView @JvmOverloads constructor(
                 selectedIndex = hitIndex
                 invalidate()
                 performClick()
+                onBarSelected?.invoke(hitIndex, bars[hitIndex])
                 return true
             }
         }

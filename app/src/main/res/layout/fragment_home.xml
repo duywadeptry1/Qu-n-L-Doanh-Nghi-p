@@ -170,12 +170,13 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/tv_home_week_badge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_pill_blue"
                     android:paddingHorizontal="10dp"
                     android:paddingVertical="4dp"
-                    android:text="@string/home_week_badge"
+                    tools:text="Hôm nay 22/11"
                     android:textColor="@color/primary_blue"
                     android:textSize="11.5sp"
                     android:textStyle="bold" />
@@ -582,12 +583,13 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/tv_home_month_badge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_pill_blue"
                     android:paddingHorizontal="10dp"
                     android:paddingVertical="4dp"
-                    android:text="@string/home_month_badge"
+                    tools:text="Tháng 11, 2026"
                     android:textColor="@color/primary_blue"
                     android:textSize="11.5sp"
                     android:textStyle="bold" />
