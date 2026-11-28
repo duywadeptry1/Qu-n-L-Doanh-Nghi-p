@@ -405,10 +405,19 @@ async function syncNotificationsFromRealData() {
     });
   });
 
-  await Notification.deleteMany({});
+  const activeIds = generated.map(item => item.id);
   if (generated.length > 0) {
-    await Notification.insertMany(generated);
+    await Notification.bulkWrite(
+      generated.map(item => ({
+        updateOne: {
+          filter: { id: item.id },
+          update: { $set: item },
+          upsert: true
+        }
+      }))
+    );
   }
+  await Notification.deleteMany({ id: { $nin: activeIds } });
   return generated;
 }
 

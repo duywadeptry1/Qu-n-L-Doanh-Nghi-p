@@ -3,6 +3,7 @@ const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const { createApiRouter } = require('./routes');
+const { connectToDatabase } = require('./services/db');
 
 function normalizeOrigin(value) {
   return String(value || '').trim().replace(/\/+$/, '');
@@ -59,12 +60,27 @@ function createApp() {
   app.use(express.json({ limit: '15mb' }));
   app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
+  // Ignore noisy browser favicon probes without touching MongoDB
+  app.get(['/favicon.ico', '/favicon.png'], (_req, res) => res.status(204).end());
+
   if (process.env.NODE_ENV !== 'test') {
     app.use((req, _res, next) => {
       console.log(`➡️  ${req.method} ${req.originalUrl} từ ${req.ip}`);
       next();
     });
   }
+
+  // Ensure MongoDB connection on serverless runtimes (Vercel) before API routes execute
+  app.use('/api', async (_req, res, next) => {
+    if (process.env.NODE_ENV === 'test') return next();
+    try {
+      await connectToDatabase();
+      return next();
+    } catch (err) {
+      console.error('❌ Serverless DB Error:', err.message);
+      return res.status(500).json({ error: 'Lỗi kết nối cơ sở dữ liệu' });
+    }
+  });
 
   // Transition-compatible API for existing Android app + JWT-aware clients
   app.use('/api', createApiRouter({ strictAuth: false }));
@@ -85,6 +101,15 @@ function createApp() {
     app.get('*', (_req, res) => {
       res.sendFile(portalIndexPath);
     });
+  } else {
+    app.get('/', (_req, res) => {
+      res.json({
+        status: 'OK',
+        service: 'Viễn Đông Sales API Server',
+        health: '/api/health',
+        portalApi: '/api/v1'
+      });
+    });
   }
 
   // Centralized error fallback (e.g. CORS rejection or malformed JSON)
@@ -96,4 +121,8 @@ function createApp() {
   return app;
 }
 
-module.exports = { createApp };
+// Export an Express app directly for Vercel's Express runtime while preserving `const { createApp } = require('./app')`
+const defaultApp = createApp();
+defaultApp.createApp = createApp;
+
+module.exports = defaultApp;
